@@ -5,7 +5,7 @@
 This simple utility is designed for exporting bank statements from
 multiple internet bank accounts.
 
-At the moment Tinkoff and Alfa-Bank are supported.
+At the moment Tinkoff (all time data) and Alfa-Bank (last two years data) are supported.
 
 ### Requirements
 
