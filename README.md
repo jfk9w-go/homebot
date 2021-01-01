@@ -9,13 +9,16 @@ At the moment Tinkoff and Alfa-Bank are supported.
 
 ### Requirements
 
-We use Selenium and Chrome driver for logging on to internet banking accounts,
-so these obviously have to be installed.
+We use Selenium and Chrome driver for logging in to internet banking accounts,
+so these obviously have to be installed. 
 
 #### Mac OS (homebrew)
 ```code:bash
 $ brew install selenium-server-standalone chromedriver
 ```
+
+Note that you also have to keep your phone close in order 
+to receive and enter the confirmation code which will be requested for authorization.
 
 ### Configuration & execution
 
