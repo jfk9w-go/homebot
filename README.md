@@ -1,6 +1,6 @@
 ## bank-statement
 
-[![GoDoc](https://pkg.go.dev/github.com/jfk9w-go/bank-statement?status.svg)](https://pkg.go.dev/github.com/jfk9w-go/bank-statement)
+[![Go Reference](https://pkg.go.dev/badge/github.com/jfk9w-go/bank-statement.svg)](https://pkg.go.dev/github.com/jfk9w-go/bank-statement)
 
 This simple utility is designed for exporting bank statements from
 multiple internet bank accounts.
@@ -51,4 +51,4 @@ alfa:
     ...
 ```
 
-You can find a more complete configuration explanation in godoc.
+You can find a more complete configuration explanation in [godoc](https://pkg.go.dev/github.com/jfk9w-go/bank-statement).
