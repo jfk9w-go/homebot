@@ -20,6 +20,15 @@ $ brew install selenium-server-standalone chromedriver
 Note that you also have to keep your phone close in order 
 to receive and enter the confirmation code which will be requested for authorization.
 
+### Installation
+
+You can either download a binary for Mac OS from [releases page](https://github.com/jfk9w-go/bank-statement/releases)
+or use go to install the package and run it from GOPATH:
+```code:bash
+$ go install github.com/jfk9w-go/bank-statement
+$ $GOPATH/bin/bank-statement config.yml
+```
+
 ### Configuration & execution
 
 The program uses a single YAML configuration file. Its path must be passed as
