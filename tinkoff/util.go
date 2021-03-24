@@ -15,16 +15,7 @@ var (
 	TradingOperationsEndpoint = Host + "/api/trading/user/operations"
 
 	tradingOperationsStart = time.Date(2015, 1, 1, 0, 0, 0, 0, time.UTC)
-	moscowLocation         *time.Location
 )
-
-func init() {
-	var err error
-	moscowLocation, err = time.LoadLocation("Europe/Moscow")
-	if err != nil {
-		panic(err)
-	}
-}
 
 type response struct {
 	ResultCode string          `json:"resultCode"`
@@ -49,4 +40,18 @@ type responseError string
 
 func (e responseError) Error() string {
 	return string(e)
+}
+
+type operationSort []Operation
+
+func (os operationSort) Len() int {
+	return len(os)
+}
+
+func (os operationSort) Less(i, j int) bool {
+	return os[i].ID < os[j].ID
+}
+
+func (os operationSort) Swap(i, j int) {
+	os[i], os[j] = os[j], os[i]
 }

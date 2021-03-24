@@ -3,6 +3,7 @@ package tinkoff
 import (
 	"context"
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 
@@ -75,8 +76,13 @@ func (c *Client) Operations(ctx context.Context, accountID string, from, to time
 		return nil, err
 	}
 
-	items := make([]Operation, 0)
-	return items, r.decode(&items)
+	operations := make([]Operation, 0)
+	if err := r.decode(&operations); err != nil {
+		return nil, err
+	}
+
+	sort.Sort(operationSort(operations))
+	return operations, nil
 }
 
 func (c *Client) ShoppingReceipt(ctx context.Context, operationID uint64) (*ShoppingReceipt, error) {

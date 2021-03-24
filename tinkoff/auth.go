@@ -1,16 +1,13 @@
 package tinkoff
 
 import (
-	"bufio"
-	"fmt"
 	"log"
-	"os"
 	"strings"
 	"time"
 
+	"github.com/jfk9w-go/bank-statement/common"
 	"github.com/pkg/errors"
 	"github.com/tebeka/selenium"
-	"golang.org/x/crypto/ssh/terminal"
 )
 
 type Auth interface {
@@ -24,8 +21,8 @@ func (id SessionID) SessionID() (string, error) {
 }
 
 type WebAuth struct {
-	WebDriverConfig
-	TwoFactor
+	common.WebDriverConfig
+	common.UserInput
 	Username  string
 	Password  string
 	sessionID string
@@ -36,7 +33,7 @@ func (a *WebAuth) SessionID() (string, error) {
 		return a.sessionID, nil
 	}
 
-	wd, err := NewChromeDriver(a.WebDriverConfig)
+	wd, err := common.NewChromeDriver(a.WebDriverConfig)
 	if err != nil {
 		panic(err)
 	}
@@ -47,7 +44,7 @@ func (a *WebAuth) SessionID() (string, error) {
 	}
 
 	if a.Username == "" {
-		if a.Username, err = a.RequestCode("username", ""); err != nil {
+		if a.Username, err = a.Request("username", ""); err != nil {
 			return "", errors.Wrap(err, "request username")
 		}
 
@@ -62,7 +59,7 @@ func (a *WebAuth) SessionID() (string, error) {
 
 	password := a.Password
 	if password == "" {
-		if password, err = a.RequestCode("password", a.Username); err != nil {
+		if password, err = a.Request("password", a.Username); err != nil {
 			return "", errors.Wrap(err, "request password")
 		}
 	}
@@ -73,7 +70,7 @@ func (a *WebAuth) SessionID() (string, error) {
 		return "", errors.Wrap(err, "enter password")
 	}
 
-	codeValue, err := a.RequestCode("SMS code", a.Username)
+	codeValue, err := a.Request("SMS code", a.Username)
 	if err != nil {
 		return "", errors.Wrap(err, "request code")
 	}
@@ -107,32 +104,4 @@ func (a *WebAuth) SessionID() (string, error) {
 	a.sessionID = psid.Value
 	log.Printf("Received session ID for Tinkoff: %s", a.sessionID)
 	return a.sessionID, nil
-}
-
-type TwoFactor interface {
-	RequestCode(description, username string) (string, error)
-}
-
-var BasicTwoFactor TwoFactor = basicTwoFactor{}
-
-type basicTwoFactor struct{}
-
-func (f basicTwoFactor) RequestCode(description, username string) (string, error) {
-	if username != "" {
-		username = " for " + username
-	}
-
-	fmt.Printf("Enter %s%s: ", description, username)
-	reader := bufio.NewReader(os.Stdin)
-	if username == "" {
-		return reader.ReadString('\n')
-	} else {
-		data, err := terminal.ReadPassword(int(os.Stdin.Fd()))
-		fmt.Println()
-		if err != nil {
-			return "", err
-		}
-
-		return string(data), nil
-	}
 }

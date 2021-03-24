@@ -1,4 +1,4 @@
-package tinkoff
+package common
 
 import (
 	"context"
