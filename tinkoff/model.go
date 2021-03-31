@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/jfk9w-go/bank-statement/common"
+	"github.com/jfk9w-go/finbot/common"
 	null "gopkg.in/guregu/null.v3"
 )
 
@@ -16,6 +16,7 @@ var Tables = []interface{}{
 	ShoppingReceipt{},
 	ShoppingReceiptItem{},
 	TradingOperation{},
+	PurchasedSecurity{},
 }
 
 //
@@ -92,7 +93,7 @@ type Operation struct {
 	Locations   []OperationLocation `json:"locations" gorm:"constraint:OnDelete:CASCADE"`
 	Merchant    OperationMerchant   `json:"merchant" gorm:"embedded;embeddedPrefix:merchant_"`
 
-	AccountID string `json:"account" tenant:"account_id"`
+	AccountID string `json:"account" gorm:"tenant"`
 	Account   Account
 
 	HasShoppingReceipt bool `json:"hasShoppingReceipt" gorm:"-"`
@@ -101,7 +102,7 @@ type Operation struct {
 }
 
 //
-// Trading operation
+// Trading
 //
 
 type TradingOperationTime time.Time
@@ -122,7 +123,7 @@ func (t *TradingOperationTime) UnmarshalJSON(data []byte) error {
 }
 
 type TradingOperation struct {
-	Username           string               `json:"-" gorm:"not null;index" tenant:"username"`
+	Username           string               `json:"-" gorm:"not null;index;tenant"`
 	ID                 uint64               `json:"id" gorm:"primaryKey;autoIncrement:false"`
 	Time               TradingOperationTime `json:"date" gorm:"type:timestamp;not null"`
 	Type               string               `json:"operationType"`
@@ -137,6 +138,17 @@ type TradingOperation struct {
 	Quantity           null.Int             `json:"quantity"`
 	CommissionCurrency null.String          `json:"commissionCurrency"`
 	Description        string               `json:"description" gorm:"not null"`
+}
+
+type PurchasedSecurity struct {
+	Ticker       string `json:"ticker" gorm:"primaryKey"`
+	SecurityType string `json:"securityType" gorm:"primaryKey"`
+	CurrentPrice struct {
+		Currency string  `json:"currency" gorm:"type:char(3);not null"`
+		Value    float64 `json:"value" gorm:"price;not null"`
+	} `json:"currentPrice" gorm:"embedded"`
+
+	Time time.Time `json:"-" gorm:"primaryKey;type:date"`
 }
 
 //

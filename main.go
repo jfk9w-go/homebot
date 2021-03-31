@@ -6,9 +6,8 @@ import (
 	"os"
 	"time"
 
-	"github.com/jfk9w-go/bank-statement/common"
-
-	"github.com/jfk9w-go/bank-statement/tinkoff"
+	"github.com/jfk9w-go/finbot/common"
+	"github.com/jfk9w-go/finbot/tinkoff"
 	"github.com/jfk9w-go/flu"
 	fluhttp "github.com/jfk9w-go/flu/http"
 	"github.com/jfk9w-go/flu/serde"
@@ -24,7 +23,7 @@ type Config struct {
 
 //noinspection GoUnhandledErrorResult
 func main() {
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(context.WithValue(context.Background(), "now", time.Now()))
 	defer cancel()
 
 	var config Config
@@ -32,14 +31,11 @@ func main() {
 		panic(err)
 	}
 
-	db, err := common.NewDatabase(config.DBConnection, tinkoff.Tables...)
+	db, err := common.NewDB(config.DBConnection, tinkoff.Tables...)
 	if err != nil {
 		panic(err)
 	}
 	defer db.Close()
-
-	now := time.Now()
-	var since time.Time
 
 	auth := &tinkoff.WebAuth{
 		WebDriverConfig: common.WebDriverConfig{
@@ -71,22 +67,17 @@ func main() {
 			continue
 		}
 
-		if err := db.Update(ctx, account); err != nil {
+		if err := db.Update(ctx, &account); err != nil {
 			panic(err)
 		}
 
-		since := since
-		if exists, err := db.Exists(ctx, new(tinkoff.Operation), account.ID); err != nil {
+		since, err := db.UpdateSince(ctx, new(tinkoff.Operation), account.ID)
+		if err != nil {
 			panic(err)
-		} else if exists {
-			since = now.Add(-60 * 24 * time.Hour)
-			if err := db.Delete(ctx, new(tinkoff.Operation), since, account.ID); err != nil {
-				panic(err)
-			}
 		}
 
 		log.Printf("Loading operations for %s (%s)", account.Name, account.ID)
-		operations, err := client.Operations(ctx, account.ID, since, now)
+		operations, err := client.Operations(ctx, account.ID, since)
 		if err != nil {
 			panic(err)
 		}
@@ -112,16 +103,12 @@ func main() {
 		log.Printf("Updated account %s", account.Name)
 	}
 
-	if exists, err := db.Exists(ctx, new(tinkoff.TradingOperation), auth.Username); err != nil {
+	since, err := db.UpdateSince(ctx, new(tinkoff.TradingOperation), auth.Username)
+	if err != nil {
 		panic(err)
-	} else if exists {
-		since = now.Add(-60 * 24 * time.Hour)
-		if err := db.Delete(ctx, new(tinkoff.TradingOperation), since, auth.Username); err != nil {
-			panic(err)
-		}
 	}
 
-	tradingOperations, err := client.TradingOperations(ctx, since, now)
+	tradingOperations, err := client.TradingOperations(ctx, since)
 	if err != nil {
 		panic(err)
 	}
@@ -137,4 +124,15 @@ func main() {
 	}
 
 	log.Printf("Finished updating trading operations")
+
+	securities, err := client.PurchasedSecurities(ctx)
+	if err != nil {
+		panic(err)
+	}
+
+	if err := db.Update(ctx, securities); err != nil {
+		panic(err)
+	}
+
+	log.Print("Finished updating purchased securities")
 }

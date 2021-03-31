@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jfk9w-go/bank-statement/common"
+	"github.com/jfk9w-go/finbot/common"
 	"github.com/pkg/errors"
 	"github.com/tebeka/selenium"
 )

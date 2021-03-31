@@ -55,7 +55,7 @@ func (c *Client) Accounts(ctx context.Context) ([]Account, error) {
 	return accounts, nil
 }
 
-func (c *Client) Operations(ctx context.Context, accountID string, from, to time.Time) ([]Operation, error) {
+func (c *Client) Operations(ctx context.Context, accountID string, since time.Time) ([]Operation, error) {
 	sessionID, err := c.SessionID()
 	if err != nil {
 		return nil, errors.Wrap(err, "auth")
@@ -66,8 +66,8 @@ func (c *Client) Operations(ctx context.Context, accountID string, from, to time
 	if err := c.HttpClient.GET(OperationsEndpoint).
 		QueryParam("sessionid", sessionID).
 		QueryParam("account", accountID).
-		QueryParam("start", formatTime(from)).
-		QueryParam("end", formatTime(to)).
+		QueryParam("start", formatTime(since)).
+		QueryParam("end", formatTime(ctx.Value("now").(time.Time))).
 		Context(ctx).
 		Execute().
 		CheckStatus(http.StatusOK).
@@ -139,7 +139,7 @@ func (c *Client) ShoppingReceipt(ctx context.Context, operationID uint64) (*Shop
 	return receipt, err
 }
 
-func (c *Client) TradingOperations(ctx context.Context, from, to time.Time) ([]TradingOperation, error) {
+func (c *Client) TradingOperations(ctx context.Context, since time.Time) ([]TradingOperation, error) {
 	sessionID, err := c.SessionID()
 	if err != nil {
 		return nil, errors.Wrap(err, "auth")
@@ -157,8 +157,8 @@ func (c *Client) TradingOperations(ctx context.Context, from, to time.Time) ([]T
 	if err := c.HttpClient.POST(TradingOperationsEndpoint).
 		QueryParam("sessionId", sessionID).
 		BodyEncoder(flu.JSON{Value: map[string]interface{}{
-			"from":               formatTime(from),
-			"to":                 formatTime(to),
+			"from":               formatTime(since),
+			"to":                 formatTime(ctx.Value("now").(time.Time)),
 			"overnightsDisabled": false,
 		}}).
 		Context(ctx).
@@ -174,4 +174,40 @@ func (c *Client) TradingOperations(ctx context.Context, from, to time.Time) ([]T
 	}
 
 	return w.Items, r.decode(&w)
+}
+
+func (c *Client) PurchasedSecurities(ctx context.Context) ([]PurchasedSecurity, error) {
+	sessionID, err := c.SessionID()
+	if err != nil {
+		return nil, errors.Wrap(err, "auth")
+	}
+
+	var r response
+	if err := c.HttpClient.POST(PurchasedSecuritiesEndpoint).
+		QueryParam("sessionId", sessionID).
+		BodyEncoder(flu.JSON{Value: map[string]interface{}{
+			"brokerAccountType": "Tinkoff",
+			"currency":          "RUB",
+		}}).
+		Context(ctx).
+		Execute().
+		CheckStatus(http.StatusOK).
+		DecodeBody(flu.JSON{Value: &r}).
+		Error; err != nil {
+		return nil, err
+	}
+
+	var securities struct {
+		Data []PurchasedSecurity `json:"data"`
+	}
+
+	if err := r.decode(&securities); err != nil {
+		return nil, err
+	}
+
+	for i := range securities.Data {
+		securities.Data[i].Time = ctx.Value("now").(time.Time)
+	}
+
+	return securities.Data, nil
 }

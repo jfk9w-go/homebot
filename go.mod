@@ -1,6 +1,6 @@
-module github.com/jfk9w-go/bank-statement
+module github.com/jfk9w-go/finbot
 
-go 1.15
+go 1.16
 
 require (
 	github.com/jackc/pgproto3/v2 v2.0.7 // indirect

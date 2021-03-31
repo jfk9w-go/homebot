@@ -7,12 +7,13 @@ import (
 )
 
 var (
-	Host                      = "https://www.tinkoff.ru"
-	LoginPage                 = Host + "/login/"
-	GroupedRequestsEndpount   = Host + "/api/common/v1/grouped_requests"
-	OperationsEndpoint        = Host + "/api/common/v1/operations"
-	ShoppingReceiptEndpount   = Host + "/api/common/v1/shopping_receipt"
-	TradingOperationsEndpoint = Host + "/api/trading/user/operations"
+	Host                        = "https://www.tinkoff.ru"
+	LoginPage                   = Host + "/login/"
+	GroupedRequestsEndpount     = Host + "/api/common/v1/grouped_requests"
+	OperationsEndpoint          = Host + "/api/common/v1/operations"
+	ShoppingReceiptEndpount     = Host + "/api/common/v1/shopping_receipt"
+	TradingOperationsEndpoint   = Host + "/api/trading/user/operations"
+	PurchasedSecuritiesEndpoint = Host + "/api/trading/portfolio/purchased_securities"
 
 	tradingOperationsStart = time.Date(2015, 1, 1, 0, 0, 0, 0, time.UTC)
 )
