@@ -73,7 +73,7 @@ type OperationLoyaltyBonus struct {
 type Operation struct {
 	ID               uint64                  `json:"id,string" gorm:"primaryKey;autoIncrement:false"`
 	AuthorizationID  null.Int                `json:"authorizationId,string"`
-	Time             OperationTime           `json:"operationTime" gorm:"type:timestamp;not null;index"`
+	Time             OperationTime           `json:"operationTime" gorm:"type:timestamptz;not null;index"`
 	DebitingTime     *OperationTime          `json:"debitingTime" gorm:"type:date"`
 	Type             string                  `json:"type" gorm:"not null"`
 	Group            string                  `json:"group" gorm:"not null"`
@@ -113,7 +113,7 @@ func (t *TradingOperationTime) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	parsed, err := time.Parse("2006-01-02T15:04:05-07:00", s)
+	parsed, err := time.ParseInLocation("2006-01-02T15:04:05-07:00", s, common.MoscowLocation)
 	if err != nil {
 		return err
 	}
@@ -125,7 +125,7 @@ func (t *TradingOperationTime) UnmarshalJSON(data []byte) error {
 type TradingOperation struct {
 	Username           string               `json:"-" gorm:"not null;index;tenant"`
 	ID                 uint64               `json:"id" gorm:"primaryKey;autoIncrement:false"`
-	Time               TradingOperationTime `json:"date" gorm:"type:timestamp;not null"`
+	Time               TradingOperationTime `json:"date" gorm:"type:timestamptz;not null"`
 	Type               string               `json:"operationType"`
 	IsMarginCall       bool                 `json:"isMarginCall"`
 	Issuer             null.String          `json:"issuer"`

@@ -63,7 +63,9 @@ func main() {
 	}
 
 	for _, account := range accounts {
-		if account.Type == "SharedCredit" || account.Type == "ExternalAccount" {
+		if account.Type == "SharedCredit" ||
+			account.Type == "SharedCurrent" ||
+			account.Type == "ExternalAccount" {
 			continue
 		}
 
