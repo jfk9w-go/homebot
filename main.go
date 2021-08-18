@@ -182,10 +182,7 @@ func (u *Updater) Update(ctx context.Context, log *logrus.Entry, now time.Time) 
 	if err != nil {
 		log.Errorf("get accounts: %s", err)
 	} else {
-		if err := u.DB.Update(ctx, accounts); err != nil {
-			log.Errorf("update accounts in db: %s", err)
-		}
-
+		importantAccounts := make([]tinkoff.Account, 0)
 		for _, account := range accounts {
 			if account.Type == "SharedCredit" ||
 				account.Type == "SharedCurrent" ||
@@ -193,7 +190,15 @@ func (u *Updater) Update(ctx context.Context, log *logrus.Entry, now time.Time) 
 				continue
 			}
 
-			u.updateAccount(ctx, log, now, &account)
+			importantAccounts = append(importantAccounts, account)
+		}
+
+		if err := u.DB.Update(ctx, importantAccounts); err != nil {
+			log.Errorf("update accounts in db: %s", err)
+		}
+
+		for i := range importantAccounts {
+			u.updateAccount(ctx, log, now, &importantAccounts[i])
 		}
 	}
 
