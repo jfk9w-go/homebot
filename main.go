@@ -124,7 +124,6 @@ func main() {
 	}
 
 	flu.AwaitSignal(syscall.SIGABRT, syscall.SIGINT, syscall.SIGKILL, syscall.SIGHUP)
-	cancel()
 }
 
 type Updater struct {
