@@ -123,7 +123,7 @@ func main() {
 		defer updater.Close()
 	}
 
-	flu.AwaitSignal(syscall.SIGABRT, syscall.SIGINT, syscall.SIGKILL, syscall.SIGHUP)
+	flu.AwaitSignal(syscall.SIGABRT, syscall.SIGINT, syscall.SIGKILL, syscall.SIGHUP, syscall.SIGTERM)
 }
 
 type Updater struct {
