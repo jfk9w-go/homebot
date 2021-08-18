@@ -18,8 +18,6 @@ import (
 var (
 	GitCommit            = "dev"
 	Tokens               = ""
-	PingInterval         = 1 * time.Minute
-	UpdateInterval       = 1 * time.Minute
 	WebDriverWaitTimeout = time.Minute
 )
 
