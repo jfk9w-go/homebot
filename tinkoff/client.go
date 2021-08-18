@@ -10,11 +10,99 @@ import (
 	"github.com/jfk9w-go/flu"
 	fluhttp "github.com/jfk9w-go/flu/http"
 	"github.com/pkg/errors"
+	"github.com/sirupsen/logrus"
 )
 
 type Client struct {
 	Auth
+	Username   string
 	HttpClient *fluhttp.Client
+	wg         *flu.WaitGroup
+	cancel     func()
+}
+
+func (c *Client) PingInBackground(ctx context.Context, each time.Duration) {
+	log := logrus.WithField("username", c.Username)
+	if c.wg != nil {
+		log.Warnf("background ping already running")
+		return
+	}
+
+	c.wg = new(flu.WaitGroup)
+	c.cancel = c.wg.Go(ctx, func(ctx context.Context) {
+		ticker := time.NewTicker(each)
+		defer func() {
+			ticker.Stop()
+			if err := ctx.Err(); err != nil {
+				log.Warnf("ping context canceled: %s", err)
+			}
+		}()
+
+		for {
+			if err := c.Ping(ctx); err != nil {
+				if errors.Is(err, ErrInvalidAccessLevel) {
+					log.Fatalf("session ID expired: %s", err)
+				} else if ctx.Err() != nil {
+					return
+				} else {
+					log.Warnf("ping: %s", err)
+				}
+			} else {
+				log.Debugf("ping ok")
+			}
+
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+			}
+		}
+	})
+
+	log.Infof("started background ping")
+}
+
+func (c *Client) Close() error {
+	if c.wg != nil {
+		c.cancel()
+		c.wg.Wait()
+	}
+
+	return nil
+}
+
+var ErrInvalidAccessLevel = errors.New("invalid access level")
+
+func (c *Client) Ping(ctx context.Context) error {
+	sessionID, err := c.SessionID()
+	if err != nil {
+		return errors.Wrap(err, "auth")
+	}
+
+	var r response
+	if err := c.HttpClient.GET(PingEndpoint).
+		QueryParam("sessionid", sessionID).
+		Context(ctx).
+		Execute().
+		CheckStatus(http.StatusOK).
+		DecodeBody(flu.JSON{Value: &r}).
+		Error; err != nil {
+		return err
+	}
+
+	var data struct {
+		AccessLevel string `json:"accessLevel"`
+	}
+
+	if err := r.decode(&data); err != nil {
+		return err
+	}
+
+	if data.AccessLevel != "CLIENT" {
+		return errors.Wrap(err, data.AccessLevel)
+	}
+
+	return nil
 }
 
 func (c *Client) Accounts(ctx context.Context) ([]Account, error) {
@@ -55,7 +143,7 @@ func (c *Client) Accounts(ctx context.Context) ([]Account, error) {
 	return accounts, nil
 }
 
-func (c *Client) Operations(ctx context.Context, accountID string, since time.Time) ([]Operation, error) {
+func (c *Client) Operations(ctx context.Context, now time.Time, accountID string, since time.Time) ([]Operation, error) {
 	sessionID, err := c.SessionID()
 	if err != nil {
 		return nil, errors.Wrap(err, "auth")
@@ -67,7 +155,7 @@ func (c *Client) Operations(ctx context.Context, accountID string, since time.Ti
 		QueryParam("sessionid", sessionID).
 		QueryParam("account", accountID).
 		QueryParam("start", formatTime(since)).
-		QueryParam("end", formatTime(ctx.Value("now").(time.Time))).
+		QueryParam("end", formatTime(now)).
 		Context(ctx).
 		Execute().
 		CheckStatus(http.StatusOK).
@@ -139,7 +227,7 @@ func (c *Client) ShoppingReceipt(ctx context.Context, operationID uint64) (*Shop
 	return receipt, err
 }
 
-func (c *Client) TradingOperations(ctx context.Context, since time.Time) ([]TradingOperation, error) {
+func (c *Client) TradingOperations(ctx context.Context, now time.Time, since time.Time) ([]TradingOperation, error) {
 	sessionID, err := c.SessionID()
 	if err != nil {
 		return nil, errors.Wrap(err, "auth")
@@ -158,7 +246,7 @@ func (c *Client) TradingOperations(ctx context.Context, since time.Time) ([]Trad
 		QueryParam("sessionId", sessionID).
 		BodyEncoder(flu.JSON{Value: map[string]interface{}{
 			"from":               formatTime(since),
-			"to":                 formatTime(ctx.Value("now").(time.Time)),
+			"to":                 formatTime(now),
 			"overnightsDisabled": false,
 		}}).
 		Context(ctx).
@@ -173,10 +261,18 @@ func (c *Client) TradingOperations(ctx context.Context, since time.Time) ([]Trad
 		Items []TradingOperation `json:"items"`
 	}
 
-	return w.Items, r.decode(&w)
+	if err := r.decode(&w); err != nil {
+		return nil, err
+	}
+
+	for i := range w.Items {
+		w.Items[i].Username = c.Username
+	}
+
+	return w.Items, nil
 }
 
-func (c *Client) PurchasedSecurities(ctx context.Context) ([]PurchasedSecurity, error) {
+func (c *Client) PurchasedSecurities(ctx context.Context, now time.Time) ([]PurchasedSecurity, error) {
 	sessionID, err := c.SessionID()
 	if err != nil {
 		return nil, errors.Wrap(err, "auth")
@@ -206,7 +302,7 @@ func (c *Client) PurchasedSecurities(ctx context.Context) ([]PurchasedSecurity, 
 	}
 
 	for i := range securities.Data {
-		securities.Data[i].Time = ctx.Value("now").(time.Time)
+		securities.Data[i].Time = now
 	}
 
 	return securities.Data, nil

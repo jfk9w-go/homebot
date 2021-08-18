@@ -56,11 +56,10 @@ func (db *DB) Delete(ctx context.Context, entity interface{}, since time.Time, t
 
 var UpdateInterval = 60 * 24 * time.Hour
 
-func (db *DB) UpdateSince(ctx context.Context, entity interface{}, tenant ...interface{}) (since time.Time, err error) {
+func (db *DB) UpdateSince(ctx context.Context, now time.Time, entity interface{}, tenant ...interface{}) (since time.Time, err error) {
 	var exists bool
 	if exists, err = db.Exists(ctx, entity, tenant); err == nil && exists {
 		if exists {
-			now := ctx.Value("now").(time.Time)
 			since = now.Add(-UpdateInterval)
 			err = db.Delete(ctx, entity, since, tenant...)
 		}

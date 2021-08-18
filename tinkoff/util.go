@@ -9,6 +9,7 @@ import (
 var (
 	Host                        = "https://www.tinkoff.ru"
 	LoginPage                   = Host + "/login/"
+	PingEndpoint                = Host + "/api/common/v1/ping"
 	GroupedRequestsEndpount     = Host + "/api/common/v1/grouped_requests"
 	OperationsEndpoint          = Host + "/api/common/v1/operations"
 	ShoppingReceiptEndpount     = Host + "/api/common/v1/shopping_receipt"
