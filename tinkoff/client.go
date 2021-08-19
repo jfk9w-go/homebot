@@ -99,7 +99,7 @@ func (c *Client) Ping(ctx context.Context) error {
 	}
 
 	if data.AccessLevel != "CLIENT" {
-		return errors.Wrap(err, data.AccessLevel)
+		return errors.Wrap(ErrInvalidAccessLevel, data.AccessLevel)
 	}
 
 	return nil
