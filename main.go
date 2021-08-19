@@ -39,11 +39,16 @@ func main() {
 		}
 	}()
 
-	seleniumPath := flag.String("selenium", "", "Selenium JAR path")
+	databaseURL := flag.String("db", "", "Database URL")
+	seleniumPath := flag.String("selenium", "/usr/local/Cellar/selenium-server-standalone/3.141.59_2/libexec/selenium-server-standalone-3.141.59.jar", "Selenium JAR path")
 	webDriverPath := flag.String("webdriver", "/usr/local/bin/chromedriver", "Web driver path")
 	pingIntervalStr := flag.String("ping-every", "1m", "Ping interval (as in time.Duration)")
 	updateIntervalStr := flag.String("update-every", "20m", "Update interval (as in time.Duration)")
 	flag.Parse()
+
+	if databaseURL != nil && *databaseURL != "" {
+		DatabaseURL = *databaseURL
+	}
 
 	if DatabaseURL == "" {
 		logrus.Fatalf("db must be specified")
@@ -103,6 +108,10 @@ func main() {
 				WaitTimeout:  WebDriverWaitTimeout,
 			},
 			UserInput: common.BasicUserInput,
+		}
+
+		if _, err := auth.SessionID(); err != nil {
+			logrus.Fatalf("web auth failed: %s", err)
 		}
 
 		client := &tinkoff.Client{

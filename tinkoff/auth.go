@@ -1,7 +1,6 @@
 package tinkoff
 
 import (
-	"log"
 	"strings"
 	"time"
 
@@ -102,6 +101,5 @@ func (a *WebAuth) SessionID() (string, error) {
 	}
 
 	a.sessionID = psid.Value
-	log.Printf("Received session ID for Tinkoff: %s", a.sessionID)
 	return a.sessionID, nil
 }
