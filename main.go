@@ -18,6 +18,7 @@ import (
 var (
 	GitCommit            = "dev"
 	Tokens               = ""
+	DatabaseURL          = ""
 	WebDriverWaitTimeout = time.Minute
 )
 
@@ -38,14 +39,13 @@ func main() {
 		}
 	}()
 
-	databaseURL := flag.String("db", "", "DB connection URL")
 	seleniumPath := flag.String("selenium", "", "Selenium JAR path")
 	webDriverPath := flag.String("webdriver", "/usr/local/bin/chromedriver", "Web driver path")
 	pingIntervalStr := flag.String("ping-every", "1m", "Ping interval (as in time.Duration)")
 	updateIntervalStr := flag.String("update-every", "20m", "Update interval (as in time.Duration)")
 	flag.Parse()
 
-	if databaseURL == nil {
+	if DatabaseURL == "" {
 		logrus.Fatalf("db must be specified")
 	}
 
@@ -59,7 +59,7 @@ func main() {
 		logrus.Fatalf("update-every has incorrect format: %s", err)
 	}
 
-	db, err := common.NewDB(*databaseURL, tinkoff.Tables...)
+	db, err := common.NewDB(DatabaseURL, tinkoff.Tables...)
 	if err != nil {
 		logrus.Fatalf("create database connection: %s", err)
 	}
@@ -195,6 +195,8 @@ func (u *Updater) Update(ctx context.Context, log *logrus.Entry, now time.Time) 
 
 		if err := u.DB.Update(ctx, importantAccounts); err != nil {
 			log.Errorf("update accounts in db: %s", err)
+		} else {
+			log.Infof("updated %d accounts in db", len(importantAccounts))
 		}
 
 		for i := range importantAccounts {
@@ -213,7 +215,7 @@ func (u *Updater) Update(ctx context.Context, log *logrus.Entry, now time.Time) 
 			if err := u.DB.Update(ctx, tradingOperations); err != nil {
 				log.Errorf("update trading operations in db: %s", err)
 			} else {
-				log.Infof("updated trading operations in db")
+				log.Infof("updated %d trading operations in db", len(tradingOperations))
 			}
 		}
 	}
@@ -224,7 +226,7 @@ func (u *Updater) Update(ctx context.Context, log *logrus.Entry, now time.Time) 
 	} else if err := u.DB.Update(ctx, securities); err != nil {
 		log.Errorf("update purchased securities in db: %s", err)
 	} else {
-		log.Infof("updated purchased securities in db")
+		log.Infof("updated %d purchased securities in db", len(securities))
 	}
 
 	log.Infof("update ok")
@@ -254,7 +256,7 @@ func (u *Updater) updateAccount(ctx context.Context, log *logrus.Entry, now time
 			if err := u.DB.Update(ctx, operations); err != nil {
 				log.Errorf("update operations in db: %s", err)
 			} else {
-				log.Infof("updated operations in db")
+				log.Infof("updated %d operations in db", len(operations))
 			}
 		}
 	}
