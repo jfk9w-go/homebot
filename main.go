@@ -30,6 +30,7 @@ func main() {
 	logrus.SetFormatter(&logrus.TextFormatter{
 		FullTimestamp:          true,
 		DisableLevelTruncation: true,
+		PadLevelText:           true,
 	})
 
 	logrus.Infof("built from commit %s", GitCommit)
