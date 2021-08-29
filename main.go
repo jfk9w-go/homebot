@@ -3,6 +3,9 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
+	"os"
+	"runtime"
 	"strings"
 	"syscall"
 	"time"
@@ -18,6 +21,7 @@ import (
 var (
 	GitCommit            = "dev"
 	Tokens               = ""
+	Credentials          = ""
 	DatabaseURL          = ""
 	WebDriverWaitTimeout = time.Minute
 )
@@ -31,6 +35,9 @@ func main() {
 		FullTimestamp:          true,
 		DisableLevelTruncation: true,
 		PadLevelText:           true,
+		CallerPrettyfier: func(frame *runtime.Frame) (function string, file string) {
+			return frame.Function, fmt.Sprintf("%s:%d", frame.File, frame.Line)
+		},
 	})
 
 	logrus.Infof("built from commit %s", GitCommit)
@@ -75,14 +82,7 @@ func main() {
 	httpClient := fluhttp.NewClient(nil)
 	if Tokens != "" {
 		logrus.Info("using predefined tokens")
-		tokens := make(map[string]string)
-		for _, pair := range strings.Split(Tokens, ";") {
-			pairItems := strings.Split(strings.Trim(pair, " "), "=")
-			username := pairItems[0]
-			token := pairItems[1]
-			tokens[username] = token
-		}
-
+		tokens := parseKeyValues(Tokens)
 		for username, token := range tokens {
 			client := &tinkoff.Client{
 				Auth:       tinkoff.SessionID(token),
@@ -101,6 +101,48 @@ func main() {
 			updater.RunInBackground(ctx, updateInterval)
 			defer updater.Close()
 		}
+
+		flu.AwaitSignal(syscall.SIGABRT, syscall.SIGINT, syscall.SIGKILL, syscall.SIGHUP, syscall.SIGTERM)
+	} else if Credentials != "" {
+		credentials := parseKeyValues(Credentials)
+		for username, password := range credentials {
+			if len(os.Args) > 1 {
+				include := false
+				for _, included := range os.Args[1:] {
+					if included == username {
+						include = true
+						break
+					}
+				}
+
+				if !include {
+					continue
+				}
+			}
+
+			auth := &tinkoff.WebAuth{
+				WebDriverConfig: common.WebDriverConfig{
+					SeleniumPath: *seleniumPath,
+					DriverPath:   *webDriverPath,
+					WaitTimeout:  WebDriverWaitTimeout,
+				},
+				UserInput: common.PartialCLIUserInput{
+					"username": username,
+					"password": password,
+				},
+			}
+
+			client := &tinkoff.Client{
+				Auth:       auth,
+				Username:   username,
+				HttpClient: httpClient,
+			}
+
+			(&Updater{
+				Client: client,
+				DB:     db,
+			}).Update(ctx, time.Now())
+		}
 	} else {
 		auth := &tinkoff.WebAuth{
 			WebDriverConfig: common.WebDriverConfig{
@@ -108,7 +150,7 @@ func main() {
 				DriverPath:   *webDriverPath,
 				WaitTimeout:  WebDriverWaitTimeout,
 			},
-			UserInput: common.BasicUserInput,
+			UserInput: common.CLIUserInput,
 		}
 
 		if _, err := auth.SessionID(); err != nil {
@@ -121,19 +163,23 @@ func main() {
 			HttpClient: httpClient,
 		}
 
-		client.PingInBackground(ctx, pingInterval)
-		defer client.Close()
-
-		updater := &Updater{
+		(&Updater{
 			Client: client,
 			DB:     db,
-		}
+		}).Update(ctx, time.Now())
+	}
+}
 
-		updater.RunInBackground(ctx, updateInterval)
-		defer updater.Close()
+func parseKeyValues(str string) map[string]string {
+	kvs := make(map[string]string)
+	for _, pair := range strings.Split(str, ";") {
+		pairItems := strings.Split(strings.Trim(pair, " "), "=")
+		key := pairItems[0]
+		value := pairItems[1]
+		kvs[key] = value
 	}
 
-	flu.AwaitSignal(syscall.SIGABRT, syscall.SIGINT, syscall.SIGKILL, syscall.SIGHUP, syscall.SIGTERM)
+	return kvs
 }
 
 type Updater struct {
@@ -143,8 +189,12 @@ type Updater struct {
 	cancel func()
 }
 
+func (u *Updater) Log() *logrus.Entry {
+	return logrus.WithField("username", u.Client.Username)
+}
+
 func (u *Updater) RunInBackground(ctx context.Context, every time.Duration) {
-	log := logrus.WithField("username", u.Client.Username)
+	log := u.Log()
 	if u.wg != nil {
 		log.Warnf("background update already running")
 		return
@@ -162,7 +212,7 @@ func (u *Updater) RunInBackground(ctx context.Context, every time.Duration) {
 
 		now := time.Now()
 		for {
-			u.Update(ctx, log, now)
+			u.Update(ctx, now)
 			if ctx.Err() != nil {
 				return
 			}
@@ -187,7 +237,8 @@ func (u *Updater) Close() error {
 	return nil
 }
 
-func (u *Updater) Update(ctx context.Context, log *logrus.Entry, now time.Time) {
+func (u *Updater) Update(ctx context.Context, now time.Time) {
+	log := u.Log()
 	accounts, err := u.Client.Accounts(ctx)
 	if err != nil {
 		log.Errorf("get accounts: %s", err)

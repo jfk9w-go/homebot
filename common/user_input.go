@@ -12,11 +12,11 @@ type UserInput interface {
 	Request(description, username string) (string, error)
 }
 
-var BasicUserInput UserInput = basicUserInput{}
+var CLIUserInput UserInput = cliUserInput{}
 
-type basicUserInput struct{}
+type cliUserInput struct{}
 
-func (f basicUserInput) Request(description, username string) (string, error) {
+func (f cliUserInput) Request(description, username string) (string, error) {
 	if username != "" {
 		username = " for " + username
 	}
@@ -34,4 +34,15 @@ func (f basicUserInput) Request(description, username string) (string, error) {
 
 		return string(data), nil
 	}
+}
+
+type PartialCLIUserInput map[string]string
+
+func (in PartialCLIUserInput) Request(description, username string) (string, error) {
+	value, ok := in[description]
+	if ok {
+		return value, nil
+	}
+
+	return CLIUserInput.Request(description, username)
 }
