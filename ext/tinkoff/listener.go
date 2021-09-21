@@ -5,9 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jfk9w-go/telegram-bot-api"
-	"github.com/jfk9w-go/telegram-bot-api/ext/output"
-	"github.com/jfk9w-go/telegram-bot-api/ext/receiver"
+	telegram "github.com/jfk9w-go/telegram-bot-api"
 	"github.com/pkg/errors"
 
 	"github.com/jfk9w-go/flu"
@@ -24,6 +22,7 @@ type Context struct {
 type CommandListener struct {
 	*Context
 	flu.Clock
+	*core.ControlButtons
 	Credentials CredentialStore
 	Executors   []Executor
 }
@@ -47,7 +46,7 @@ func (l *CommandListener) OnCommand(ctx context.Context, tgclient telegram.Clien
 		return err
 	}
 
-	report := core.NewReport()
+	report := core.NewJobReport()
 	sync := &Sync{
 		Context: l.Context,
 		Client:  client,
@@ -61,7 +60,7 @@ func (l *CommandListener) OnCommand(ctx context.Context, tgclient telegram.Clien
 		}
 	}
 
-	output := createOutput(tgclient, cmd)
+	output := l.ControlButtons.Output(tgclient, cmd)
 	for _, line := range report.Dump() {
 		if err := output.WriteUnbreakable(ctx, line+"\n"); err != nil {
 			return errors.Wrap(err, "send reply")
@@ -73,19 +72,4 @@ func (l *CommandListener) OnCommand(ctx context.Context, tgclient telegram.Clien
 	}
 
 	return nil
-}
-
-func createOutput(tgclient telegram.Client, cmd *telegram.Command) *output.Paged {
-	return &output.Paged{
-		Receiver: &receiver.Chat{
-			Sender:      tgclient,
-			ID:          cmd.Chat.ID,
-			ReplyMarkup: telegram.InlineKeyboard(keyboard),
-		},
-		PageSize: telegram.MaxMessageSize,
-	}
-}
-
-var keyboard = []telegram.Button{
-	(&telegram.Command{Key: "/t"}).Button("🔄"),
 }

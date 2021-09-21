@@ -6,8 +6,10 @@ import (
 
 	"github.com/jfk9w-go/flu"
 	"github.com/jfk9w-go/flu/metrics"
-	"github.com/jfk9w-go/telegram-bot-api"
+	telegram "github.com/jfk9w-go/telegram-bot-api"
 	"gorm.io/gorm"
+
+	"github.com/jfk9w-go/homebot/core"
 )
 
 type Interface interface {
@@ -20,5 +22,6 @@ type Interface interface {
 
 type Extension interface {
 	Key() string
-	Apply(ctx context.Context, app Interface) (telegram.CommandListener, error)
+	Icon() string
+	Apply(ctx context.Context, app Interface, buttons *core.ControlButtons) (telegram.CommandListener, error)
 }

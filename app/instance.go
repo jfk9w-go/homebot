@@ -3,7 +3,7 @@ package app
 import (
 	"context"
 
-	"github.com/jfk9w-go/telegram-bot-api"
+	telegram "github.com/jfk9w-go/telegram-bot-api"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
@@ -11,12 +11,15 @@ import (
 	"github.com/jfk9w-go/flu"
 	"github.com/jfk9w-go/flu/app"
 	gormutil "github.com/jfk9w-go/flu/gorm"
+
+	"github.com/jfk9w-go/homebot/core"
 )
 
 type Instance struct {
 	*app.Base
-	plugins   []Extension
-	databases map[string]*gorm.DB
+	extensions []Extension
+	databases  map[string]*gorm.DB
+	buttons    *core.ControlButtons
 }
 
 func Create(version string, clock flu.Clock, config flu.File) (*Instance, error) {
@@ -26,14 +29,14 @@ func Create(version string, clock flu.Clock, config flu.File) (*Instance, error)
 	}
 
 	return &Instance{
-		Base:      base,
-		plugins:   make([]Extension, 0),
-		databases: make(map[string]*gorm.DB),
+		Base:       base,
+		extensions: make([]Extension, 0),
+		databases:  make(map[string]*gorm.DB),
 	}, nil
 }
 
-func (app *Instance) ApplyPlugins(plugins ...Extension) {
-	app.plugins = append(app.plugins, plugins...)
+func (app *Instance) ApplyExtensions(extensions ...Extension) {
+	app.extensions = append(app.extensions, extensions...)
 }
 
 func (app *Instance) GetDatabase(conn string) (*gorm.DB, error) {
@@ -51,29 +54,47 @@ func (app *Instance) GetDatabase(conn string) (*gorm.DB, error) {
 	return db, nil
 }
 
+func (app *Instance) GetControlButtons() *core.ControlButtons {
+	if app.buttons == nil {
+		app.buttons = core.NewControlButtons()
+	}
+
+	return app.buttons
+}
+
 func (app *Instance) Run(ctx context.Context) error {
 	config := new(struct{ Telegram struct{ Token string } })
 	if err := app.GetConfig(config); err != nil {
 		return errors.Wrap(err, "get config")
 	}
 
-	bot := telegram.NewBot(ctx, nil, config.Telegram.Token)
 	registry := make(telegram.CommandRegistry)
-	for _, plugin := range app.plugins {
+	buttons := core.NewControlButtons()
+	registry.AddFunc("/start", func(ctx context.Context, client telegram.Client, cmd *telegram.Command) error {
+		output := buttons.Output(client, cmd)
+		if err := output.WriteUnbreakable(ctx, "hi"); err != nil {
+			return err
+		}
+		return output.Flush(ctx)
+	})
+
+	for _, plugin := range app.extensions {
 		key := plugin.Key()
 		if _, ok := registry[key]; ok {
-			return errors.Errorf("plugin already registered for key %s", key)
+			return errors.Errorf("extension already registered for key %s", key)
 		}
 
 		var err error
-		registry[key], err = plugin.Apply(ctx, app)
+		registry[key], err = plugin.Apply(ctx, app, buttons)
 		if err != nil {
 			return errors.Wrapf(err, "apply plugin %s", key)
 		}
 
+		buttons.Add(plugin.Icon(), key)
 		logrus.WithField("service", key).Infof("init ok")
 	}
 
+	bot := telegram.NewBot(ctx, nil, config.Telegram.Token)
 	app.Manage(bot.CommandListener(registry))
 	return nil
 }

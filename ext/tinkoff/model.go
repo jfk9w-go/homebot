@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/jfk9w-go/telegram-bot-api"
+	telegram "github.com/jfk9w-go/telegram-bot-api"
 
 	"github.com/jfk9w-go/flu"
 
@@ -33,7 +33,7 @@ type Sync struct {
 	*Context
 	*external.Client
 	Now    time.Time
-	report *core.Report
+	report *core.JobReport
 }
 
 func (s *Sync) Run(ctx context.Context, executor Executor) error {

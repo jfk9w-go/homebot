@@ -1,0 +1,66 @@
+on: [ push ]
+name: ci
+jobs:
+  test:
+    strategy:
+      matrix:
+        go-version: [ 1.17.x ]
+        os: [ ubuntu-latest ]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: setup cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: install go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: install go cover tool
+        run: go install golang.org/x/tools/cmd/cover@latest
+      - name: test
+        run: |
+          go test -coverprofile=coverage-report -v ./...
+          go tool cover -html=coverage-report -o coverage-report.html
+      - name: upload coverage report artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: test-reports
+          path: coverage-report.html
+          retention-days: 7
+
+  analyze:
+    strategy:
+      matrix:
+        go-version: [ 1.17.x ]
+        os: [ ubuntu-latest ]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: checkout
+        uses: actions/checkout@v2
+      - name: setup cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/go/pkg/mod
+            ~/.cache/go-build
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+      - name: install go
+        uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go-version }}
+      - name: lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          skip-go-installation: true
+          skip-pkg-cache: true
+          skip-build-cache: true

@@ -4,21 +4,26 @@ import (
 	"context"
 	"time"
 
-	"github.com/jfk9w-go/telegram-bot-api"
+	telegram "github.com/jfk9w-go/telegram-bot-api"
 	"github.com/pkg/errors"
 
 	"github.com/jfk9w-go/flu"
 
 	"github.com/jfk9w-go/homebot/app"
+	"github.com/jfk9w-go/homebot/core"
 )
 
 type Extension []Executor
 
 func (e Extension) Key() string {
-	return "/t"
+	return "tinkoff"
 }
 
-func (e Extension) Apply(ctx context.Context, app app.Interface) (telegram.CommandListener, error) {
+func (e Extension) Icon() string {
+	return "🔄"
+}
+
+func (e Extension) Apply(ctx context.Context, app app.Interface, buttons *core.ControlButtons) (telegram.CommandListener, error) {
 	config := new(struct {
 		Tinkoff struct {
 			Database string
@@ -51,8 +56,9 @@ func (e Extension) Apply(ctx context.Context, app app.Interface) (telegram.Comma
 			Storage: storage,
 			Reload:  config.Tinkoff.Reload.GetOrDefault(60 * 24 * time.Hour),
 		},
-		Clock:       app,
-		Credentials: creds,
-		Executors:   e,
+		ControlButtons: buttons,
+		Clock:          app,
+		Credentials:    creds,
+		Executors:      e,
 	}, nil
 }

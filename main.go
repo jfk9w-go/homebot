@@ -8,6 +8,7 @@ import (
 
 	"github.com/jfk9w-go/flu"
 
+	"github.com/jfk9w-go/homebot/ext/hassgpx"
 	"github.com/jfk9w-go/homebot/ext/tinkoff/sync"
 
 	"github.com/jfk9w-go/homebot/app"
@@ -30,7 +31,11 @@ func main() {
 		logrus.Fatal(err)
 	}
 
-	app.ApplyPlugins(tinkoff.Extension{sync.Accounts, sync.TradingOperations, sync.PurchasedSecurities})
+	app.ApplyExtensions(
+		hassgpx.Extension,
+		tinkoff.Extension{sync.Accounts, sync.TradingOperations, sync.PurchasedSecurities},
+	)
+
 	if err := app.Run(ctx); err != nil {
 		logrus.Fatal(err)
 	}
