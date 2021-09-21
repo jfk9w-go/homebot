@@ -69,7 +69,3 @@ func (l *CommandListener) OnCommand(ctx context.Context, client telegram.Client,
 			ReplyMarkup: l.Keyboard()})
 	return err
 }
-
-func remove(file flu.File) {
-	_ = file.Remove()
-}
