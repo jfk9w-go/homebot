@@ -1,23 +1,11 @@
-package tinkoff
+package external
 
 import (
 	"encoding/json"
 	"time"
 
-	"github.com/jfk9w-go/finbot/common"
-	null "gopkg.in/guregu/null.v3"
+	"gopkg.in/guregu/null.v3"
 )
-
-var Tables = []interface{}{
-	Account{},
-	Operation{},
-	OperationLocation{},
-	OperationLoyaltyBonus{},
-	ShoppingReceipt{},
-	ShoppingReceiptItem{},
-	TradingOperation{},
-	PurchasedSecurity{},
-}
 
 //
 // Operation
@@ -40,7 +28,7 @@ func (t *OperationTime) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	*t = OperationTime(time.Unix(s.Milliseconds/1e3, 0).In(common.MoscowLocation))
+	*t = OperationTime(time.Unix(s.Milliseconds/1e3, 0).In(MoscowLocation))
 	return nil
 }
 
@@ -73,7 +61,7 @@ type OperationLoyaltyBonus struct {
 type Operation struct {
 	ID               uint64                  `json:"id,string" gorm:"primaryKey;autoIncrement:false"`
 	AuthorizationID  null.Int                `json:"authorizationId,string"`
-	Time             OperationTime           `json:"operationTime" gorm:"type:timestamptz;not null;index"`
+	Time             OperationTime           `json:"operationTime" gorm:"type:timestamptz;not null;index;time"`
 	DebitingTime     *OperationTime          `json:"debitingTime" gorm:"type:date"`
 	Type             string                  `json:"type" gorm:"not null"`
 	Group            string                  `json:"group" gorm:"not null"`
@@ -87,13 +75,13 @@ type Operation struct {
 		Name string `json:"name" gorm:"column:category"`
 	} `json:"spendingCategory" gorm:"embedded"`
 
-	CardNumber  null.String         `json:"cardNumber"`
-	MCC         string              `json:"mccString" gorm:"type:char(4);not null"`
-	CardPresent bool                `json:"cardPresent" gorm:"not null"`
-	Locations   []OperationLocation `json:"locations" gorm:"constraint:OnDelete:CASCADE"`
-	Merchant    OperationMerchant   `json:"merchant" gorm:"embedded;embeddedPrefix:merchant_"`
+	CardNumber  null.String `json:"cardNumber"`
+	MCC         string      `json:"mccString" gorm:"type:char(4);not null"`
+	CardPresent bool        `json:"cardPresent" gorm:"not null"`
+	//Locations   []OperationLocation `json:"locations" gorm:"constraint:OnDelete:CASCADE;foreignKey:OperationID"`
+	Merchant OperationMerchant `json:"merchant" gorm:"embedded;embeddedPrefix:merchant_"`
 
-	AccountID string `json:"account" gorm:"tenant"`
+	AccountID string `json:"account" gorm:"tenant;constraint:OnDelete:CASCADE"`
 	Account   Account
 
 	HasShoppingReceipt bool `json:"hasShoppingReceipt" gorm:"-"`
@@ -113,7 +101,7 @@ func (t *TradingOperationTime) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	parsed, err := time.ParseInLocation("2006-01-02T15:04:05-07:00", s, common.MoscowLocation)
+	parsed, err := time.ParseInLocation("2006-01-02T15:04:05-07:00", s, MoscowLocation)
 	if err != nil {
 		return err
 	}
@@ -125,7 +113,7 @@ func (t *TradingOperationTime) UnmarshalJSON(data []byte) error {
 type TradingOperation struct {
 	Username           string               `json:"-" gorm:"not null;index;tenant"`
 	ID                 uint64               `json:"id" gorm:"primaryKey;autoIncrement:false"`
-	Time               TradingOperationTime `json:"date" gorm:"type:timestamptz;not null"`
+	Time               TradingOperationTime `json:"date" gorm:"type:timestamptz;not null;time"`
 	Type               string               `json:"operationType"`
 	IsMarginCall       bool                 `json:"isMarginCall"`
 	Issuer             null.String          `json:"issuer"`

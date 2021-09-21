@@ -1,0 +1,55 @@
+package sync
+
+import (
+	"context"
+
+	"github.com/pkg/errors"
+
+	"github.com/jfk9w-go/homebot/ext/tinkoff"
+	"github.com/jfk9w-go/homebot/ext/tinkoff/external"
+)
+
+type Operations struct {
+	external.Account
+}
+
+func (o Operations) Name() string {
+	return o.Account.Name
+}
+
+func (o Operations) Run(ctx context.Context, sync *tinkoff.Sync) (int, error) {
+	since, err := sync.GetLatestTime(ctx, new(external.Operation), o.Account.ID)
+	if err != nil {
+		return 0, errors.Wrap(err, "get latest time")
+	}
+
+	if since.UnixNano() > 0 {
+		since = since.Add(-sync.Reload)
+	}
+
+	operations, err := sync.Operations(ctx, sync.Now, o.Account.ID, since)
+	if err != nil {
+		return 0, errors.Wrap(err, "get")
+	}
+
+	for i, operation := range operations {
+		if operation.HasShoppingReceipt {
+			receipt, err := sync.ShoppingReceipt(ctx, operation.ID)
+			if err != nil {
+				return 0, errors.Wrapf(err, "get receipt %d", operation.ID)
+			}
+
+			operations[i].ShoppingReceipt = receipt
+		}
+	}
+
+	if len(operations) == 0 {
+		return 0, nil
+	}
+
+	if err := sync.Insert(ctx, operations); err != nil {
+		return 0, errors.Wrap(err, "update")
+	}
+
+	return len(operations), nil
+}
