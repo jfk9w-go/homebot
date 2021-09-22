@@ -59,7 +59,8 @@ type OperationLoyaltyBonus struct {
 }
 
 type Operation struct {
-	ID               uint64                  `json:"id,string" gorm:"primaryKey;autoIncrement:false"`
+	ID uint64 `json:"id,string" gorm:"primaryKey;autoIncrement:false"`
+	// nolint
 	AuthorizationID  null.Int                `json:"authorizationId,string"`
 	Time             OperationTime           `json:"operationTime" gorm:"type:timestamptz;not null;index;time"`
 	DebitingTime     *OperationTime          `json:"debitingTime" gorm:"type:date"`

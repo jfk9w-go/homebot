@@ -44,7 +44,7 @@ func (r *Response) Unmarshal(ecode string, value interface{}) error {
 		code = r.Status
 	}
 
-	if strings.ToUpper(code) != strings.ToUpper(ecode) {
+	if !strings.EqualFold(code, ecode) {
 		return ResultCodeError(code)
 	}
 
