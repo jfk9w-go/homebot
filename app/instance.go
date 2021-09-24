@@ -79,19 +79,26 @@ func (app *Instance) Run(ctx context.Context) error {
 	})
 
 	for _, plugin := range app.extensions {
-		key := plugin.Key()
-		if _, ok := registry[key]; ok {
-			return errors.Errorf("extension already registered for key %s", key)
-		}
-
-		var err error
-		registry[key], err = plugin.Apply(ctx, app, buttons)
+		id := plugin.ID()
+		listener, err := plugin.Apply(ctx, app, buttons)
 		if err != nil {
-			return errors.Wrapf(err, "apply plugin %s", key)
+			return errors.Wrapf(err, "apply plugin %s", id)
 		}
 
-		buttons.Add(plugin.Icon(), key)
-		logrus.WithField("service", key).Infof("init ok")
+		var commands telegram.CommandRegistry
+		if listener != nil {
+			commands = telegram.CommandRegistryFrom(listener)
+			for key, command := range commands {
+				if _, ok := registry[key]; ok {
+					logrus.Fatalf("duplicate command handler for %s@%s", key, id)
+				}
+
+				registry[key] = command
+			}
+		}
+
+		buttons.Add(commands)
+		logrus.WithField("service", id).Infof("init ok")
 	}
 
 	bot := telegram.NewBot(ctx, nil, config.Telegram.Token)

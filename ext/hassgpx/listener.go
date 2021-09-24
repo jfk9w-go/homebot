@@ -7,10 +7,9 @@ import (
 	"time"
 
 	"github.com/jfk9w-go/flu"
+	"github.com/jfk9w-go/homebot/core"
 	telegram "github.com/jfk9w-go/telegram-bot-api"
 	"github.com/pkg/errors"
-
-	"github.com/jfk9w-go/homebot/core"
 )
 
 type CommandListener struct {
@@ -21,7 +20,7 @@ type CommandListener struct {
 	Lookback time.Duration
 }
 
-func (l *CommandListener) OnCommand(ctx context.Context, client telegram.Client, cmd *telegram.Command) error {
+func (l *CommandListener) Get_GPX_track(ctx context.Context, client telegram.Client, cmd *telegram.Command) error {
 	entityID, ok := l.Users[cmd.User.ID]
 	if !ok {
 		return errors.New("unknown user")

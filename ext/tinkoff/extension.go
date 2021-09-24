@@ -4,26 +4,26 @@ import (
 	"context"
 	"time"
 
-	telegram "github.com/jfk9w-go/telegram-bot-api"
-	"github.com/pkg/errors"
-
 	"github.com/jfk9w-go/flu"
-
 	"github.com/jfk9w-go/homebot/app"
 	"github.com/jfk9w-go/homebot/core"
+	telegram "github.com/jfk9w-go/telegram-bot-api"
+	"github.com/pkg/errors"
 )
 
 type Extension []Executor
 
-func (e Extension) Key() string {
+func (e Extension) ID() string {
 	return "tinkoff"
 }
 
-func (e Extension) Icon() string {
-	return "🔄"
+func (e Extension) Buttons() []telegram.Button {
+	return []telegram.Button{
+		(&telegram.Command{Key: "/tsync"}).Button("Update bank data"),
+	}
 }
 
-func (e Extension) Apply(ctx context.Context, app app.Interface, buttons *core.ControlButtons) (telegram.CommandListener, error) {
+func (e Extension) Apply(ctx context.Context, app app.Interface, buttons *core.ControlButtons) (interface{}, error) {
 	config := new(struct {
 		Tinkoff *struct {
 			Database string

@@ -5,13 +5,11 @@ import (
 	"strings"
 	"time"
 
-	telegram "github.com/jfk9w-go/telegram-bot-api"
-	"github.com/pkg/errors"
-
 	"github.com/jfk9w-go/flu"
-
 	"github.com/jfk9w-go/homebot/core"
 	"github.com/jfk9w-go/homebot/ext/tinkoff/external"
+	telegram "github.com/jfk9w-go/telegram-bot-api"
+	"github.com/pkg/errors"
 )
 
 type Context struct {
@@ -27,7 +25,7 @@ type CommandListener struct {
 	Executors   []Executor
 }
 
-func (l *CommandListener) OnCommand(ctx context.Context, tgclient telegram.Client, cmd *telegram.Command) error {
+func (l *CommandListener) Update_bank_statement(ctx context.Context, tgclient telegram.Client, cmd *telegram.Command) error {
 	cred, ok := l.Credentials[cmd.User.ID]
 	if !ok {
 		return errors.New("unknown user")

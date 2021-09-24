@@ -5,26 +5,21 @@ import (
 	"time"
 
 	"github.com/jfk9w-go/flu"
-	telegram "github.com/jfk9w-go/telegram-bot-api"
-	"github.com/pkg/errors"
-
 	"github.com/jfk9w-go/homebot/app"
 	"github.com/jfk9w-go/homebot/core"
+	telegram "github.com/jfk9w-go/telegram-bot-api"
+	"github.com/pkg/errors"
 )
 
 var Extension app.Extension = extension{}
 
 type extension struct{}
 
-func (extension) Key() string {
-	return "gpx"
+func (extension) ID() string {
+	return "hassgpx"
 }
 
-func (extension) Icon() string {
-	return "🗺"
-}
-
-func (extension) Apply(_ context.Context, app app.Interface, buttons *core.ControlButtons) (telegram.CommandListener, error) {
+func (extension) Apply(_ context.Context, app app.Interface, buttons *core.ControlButtons) (interface{}, error) {
 	config := new(struct {
 		HassGPX *struct {
 			Database string
