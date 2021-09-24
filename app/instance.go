@@ -3,16 +3,14 @@ package app
 import (
 	"context"
 
+	"github.com/jfk9w-go/flu"
+	"github.com/jfk9w-go/flu/app"
+	gormutil "github.com/jfk9w-go/flu/gorm"
+	"github.com/jfk9w-go/homebot/core"
 	telegram "github.com/jfk9w-go/telegram-bot-api"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
-
-	"github.com/jfk9w-go/flu"
-	"github.com/jfk9w-go/flu/app"
-	gormutil "github.com/jfk9w-go/flu/gorm"
-
-	"github.com/jfk9w-go/homebot/core"
 )
 
 type Instance struct {
