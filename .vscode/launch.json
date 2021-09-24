@@ -10,7 +10,7 @@
             "request": "launch",
             "mode": "auto",
             "program": ".",
-            "args": ["config/config.yml"]
+            "args": ["config.local.yml"]
         }
     ]
 }

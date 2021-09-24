@@ -25,7 +25,7 @@ func (e Extension) Icon() string {
 
 func (e Extension) Apply(ctx context.Context, app app.Interface, buttons *core.ControlButtons) (telegram.CommandListener, error) {
 	config := new(struct {
-		Tinkoff struct {
+		Tinkoff *struct {
 			Database string
 			Data     string
 			Reload   flu.Duration
@@ -34,6 +34,10 @@ func (e Extension) Apply(ctx context.Context, app app.Interface, buttons *core.C
 
 	if err := app.GetConfig(config); err != nil {
 		return nil, errors.Wrap(err, "get config")
+	}
+
+	if config.Tinkoff == nil {
+		return nil, nil
 	}
 
 	db, err := app.GetDatabase(config.Tinkoff.Database)

@@ -26,7 +26,7 @@ func (extension) Icon() string {
 
 func (extension) Apply(_ context.Context, app app.Interface, buttons *core.ControlButtons) (telegram.CommandListener, error) {
 	config := new(struct {
-		HassGPX struct {
+		HassGPX *struct {
 			Database string
 			Lookback flu.Duration
 			Users    map[telegram.ID]string
@@ -35,6 +35,10 @@ func (extension) Apply(_ context.Context, app app.Interface, buttons *core.Contr
 
 	if err := app.GetConfig(config); err != nil {
 		return nil, errors.Wrap(err, "get config")
+	}
+
+	if config.HassGPX == nil {
+		return nil, nil
 	}
 
 	db, err := app.GetDatabase(config.HassGPX.Database)
