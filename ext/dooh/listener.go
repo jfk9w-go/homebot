@@ -143,7 +143,6 @@ func (s *CommandListener) doUpdateSurfaces(ctx context.Context, writer *html.Wri
 		return errors.Wrap(err, "save surfaces")
 	}
 
-	writer.Bold("\nOK")
 	logrus.WithField("service", "dooh").Info("updated surfaces")
 	return nil
 }
