@@ -36,7 +36,7 @@ func (b *ControlButtons) Output(client telegram.Client, cmd *telegram.Command) *
 		Receiver: &receiver.Chat{
 			Sender:      client,
 			ID:          cmd.Chat.ID,
-			ReplyMarkup: b.Keyboard(cmd.User.ID, cmd.User.ID),
+			ReplyMarkup: b.Keyboard(cmd.User.ID, cmd.Chat.ID),
 		},
 		PageSize: telegram.MaxMessageSize,
 	}
