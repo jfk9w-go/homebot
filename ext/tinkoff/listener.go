@@ -25,6 +25,15 @@ type CommandListener struct {
 	Executors   []Executor
 }
 
+func (l *CommandListener) AuthorizedUsers() map[telegram.ID]bool {
+	userIDs := make(map[telegram.ID]bool, len(l.Credentials))
+	for userID := range l.Credentials {
+		userIDs[userID] = true
+	}
+
+	return userIDs
+}
+
 func (l *CommandListener) Update_bank_statement(ctx context.Context, tgclient telegram.Client, cmd *telegram.Command) error {
 	cred, ok := l.Credentials[cmd.User.ID]
 	if !ok {
@@ -32,6 +41,8 @@ func (l *CommandListener) Update_bank_statement(ctx context.Context, tgclient te
 	}
 
 	client, err := external.Authorize(ctx, cred.Username, cred.Password, func(ctx context.Context) (string, error) {
+		ctx, cancel := context.WithTimeout(ctx, time.Minute)
+		defer cancel()
 		m, err := tgclient.Ask(ctx, cmd.Chat.ID, &telegram.Text{Text: "Code:"}, nil)
 		if err != nil {
 			return "", err

@@ -7,6 +7,7 @@ import (
 	"github.com/jfk9w-go/flu"
 	"github.com/jfk9w-go/flu/metrics"
 	"github.com/jfk9w-go/homebot/core"
+	"github.com/jfk9w-go/telegram-bot-api"
 	"gorm.io/gorm"
 )
 
@@ -21,4 +22,8 @@ type Interface interface {
 type Extension interface {
 	ID() string
 	Apply(ctx context.Context, app Interface, buttons *core.ControlButtons) (interface{}, error)
+}
+
+type AccessControl interface {
+	AuthorizedUsers() map[telegram.ID]bool
 }

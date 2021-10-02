@@ -16,12 +16,21 @@ type CommandListener struct {
 	flu.Clock
 	Storage
 	*core.ControlButtons
-	Users    map[telegram.ID]string
+	UserIDs  map[telegram.ID]string
 	Lookback time.Duration
 }
 
+func (l *CommandListener) AuthorizedUsers() map[telegram.ID]bool {
+	userIDs := make(map[telegram.ID]bool, len(l.UserIDs))
+	for userID := range l.UserIDs {
+		userIDs[userID] = true
+	}
+
+	return userIDs
+}
+
 func (l *CommandListener) Get_GPX_track(ctx context.Context, client telegram.Client, cmd *telegram.Command) error {
-	entityID, ok := l.Users[cmd.User.ID]
+	entityID, ok := l.UserIDs[cmd.User.ID]
 	if !ok {
 		return errors.New("unknown user")
 	}
@@ -65,6 +74,6 @@ func (l *CommandListener) Get_GPX_track(ctx context.Context, client telegram.Cli
 			Input:    buffer,
 			Filename: filename},
 		&telegram.SendOptions{
-			ReplyMarkup: l.Keyboard()})
+			ReplyMarkup: l.Keyboard(cmd.User.ID)})
 	return err
 }

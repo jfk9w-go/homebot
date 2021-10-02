@@ -2,3 +2,4 @@
 *.iml
 config.local.yml
 tdata.bin
+console.sql

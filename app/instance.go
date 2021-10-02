@@ -95,7 +95,12 @@ func (app *Instance) Run(ctx context.Context) error {
 			}
 		}
 
-		buttons.Add(commands)
+		var userIDs map[telegram.ID]bool
+		if control, ok := listener.(AccessControl); ok {
+			userIDs = control.AuthorizedUsers()
+		}
+
+		buttons.Add(commands, userIDs)
 		logrus.WithField("service", id).Infof("init ok")
 	}
 

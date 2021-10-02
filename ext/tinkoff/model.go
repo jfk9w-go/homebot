@@ -4,12 +4,10 @@ import (
 	"context"
 	"time"
 
-	telegram "github.com/jfk9w-go/telegram-bot-api"
-
 	"github.com/jfk9w-go/flu"
-
 	"github.com/jfk9w-go/homebot/core"
 	"github.com/jfk9w-go/homebot/ext/tinkoff/external"
+	telegram "github.com/jfk9w-go/telegram-bot-api"
 )
 
 type Credential struct {

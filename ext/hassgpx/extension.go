@@ -46,7 +46,7 @@ func (extension) Apply(_ context.Context, app app.Interface, buttons *core.Contr
 		Clock:          app,
 		Storage:        storage,
 		ControlButtons: buttons,
-		Users:          config.HassGPX.Users,
+		UserIDs:          config.HassGPX.Users,
 		Lookback:       config.HassGPX.Lookback.GetOrDefault(24 * time.Hour),
 	}, nil
 }
