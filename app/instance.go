@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jfk9w-go/flu"
 	"github.com/jfk9w-go/flu/app"
@@ -80,9 +81,10 @@ func (app *Instance) Run(ctx context.Context) error {
 	buttons := core.NewControlButtons()
 	registry.AddFunc("/start", func(ctx context.Context, client telegram.Client, cmd *telegram.Command) error {
 		output := buttons.Output(client, cmd)
-		if err := output.WriteUnbreakable(ctx, "hi"); err != nil {
+		if err := output.WriteUnbreakable(ctx, fmt.Sprintf("hi, %d @ %d", cmd.User.ID, cmd.Chat.ID)); err != nil {
 			return err
 		}
+
 		return output.Flush(ctx)
 	})
 
