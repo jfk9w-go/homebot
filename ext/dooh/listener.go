@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/jfk9w-go/flu"
+	"github.com/jfk9w-go/homebot/core"
 	"github.com/jfk9w-go/telegram-bot-api"
 	"github.com/jfk9w-go/telegram-bot-api/ext/html"
 	"github.com/jfk9w-go/telegram-bot-api/ext/output"
@@ -18,25 +19,30 @@ type SurfaceDictionary struct {
 	Surfaces map[string]Surface
 }
 
-type Service struct {
+type CommandListener struct {
 	Client         *Client
 	TelegramClient telegram.Client
 	File           flu.File
 	ChatID         telegram.ID
+	ControlButtons *core.ControlButtons
 	work           flu.WaitGroup
 	cancel         func()
 }
 
-func (s *Service) RunInBackground(ctx context.Context, updateEvery time.Duration) error {
-	if s.cancel != nil {
+func (l *CommandListener) AuthorizedChats() map[telegram.ID]bool {
+	return map[telegram.ID]bool{l.ChatID: true}
+}
+
+func (l *CommandListener) RunInBackground(ctx context.Context, updateEvery time.Duration) error {
+	if l.cancel != nil {
 		return nil
 	}
 
-	if err := s.UpdateSurfaces(ctx); err != nil {
+	if err := l.updateSurfaces(ctx); err != nil {
 		return err
 	}
 
-	s.cancel = s.work.Go(ctx, func(ctx context.Context) {
+	l.cancel = l.work.Go(ctx, func(ctx context.Context) {
 		ticker := time.NewTicker(updateEvery)
 		defer ticker.Stop()
 		for {
@@ -44,7 +50,7 @@ func (s *Service) RunInBackground(ctx context.Context, updateEvery time.Duration
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				if err := s.UpdateSurfaces(ctx); err != nil {
+				if err := l.updateSurfaces(ctx); err != nil {
 					return
 				}
 			}
@@ -54,18 +60,22 @@ func (s *Service) RunInBackground(ctx context.Context, updateEvery time.Duration
 	return nil
 }
 
-func (s *Service) Close() error {
-	if s.cancel != nil {
-		s.cancel()
-		s.work.Wait()
+func (l *CommandListener) Close() error {
+	if l.cancel != nil {
+		l.cancel()
+		l.work.Wait()
 	}
 
 	return nil
 }
 
-func (s *Service) UpdateSurfaces(ctx context.Context) error {
-	writer := s.newHTMLWriter(ctx)
-	if err := s.doUpdateSurfaces(ctx, writer); err != nil {
+func (l *CommandListener) Update_surfaces(ctx context.Context, _ telegram.Client, _ *telegram.Command) error {
+	return l.updateSurfaces(ctx)
+}
+
+func (l *CommandListener) updateSurfaces(ctx context.Context) error {
+	writer := l.newHTMLWriter(ctx)
+	if err := l.doUpdateSurfaces(ctx, writer); err != nil {
 		if flu.IsContextRelated(err) {
 			return err
 		}
@@ -84,7 +94,7 @@ func (s *Service) UpdateSurfaces(ctx context.Context) error {
 	return nil
 }
 
-func (s *Service) doUpdateSurfaces(ctx context.Context, writer *html.Writer) error {
+func (s *CommandListener) doUpdateSurfaces(ctx context.Context, writer *html.Writer) error {
 	surfaces, err := s.Client.Surfaces(ctx)
 	if err != nil {
 		return errors.Wrap(err, "get surfaces")
@@ -104,6 +114,7 @@ func (s *Service) doUpdateSurfaces(ctx context.Context, writer *html.Writer) err
 	}
 
 	for _, surface := range surfaces {
+		updated.Surfaces[surface.ID] = surface
 		name := fmt.Sprintf("[%s %s] %s",
 			surface.Attributes.Network,
 			surface.Attributes.SurfaceID,
@@ -126,25 +137,26 @@ func (s *Service) doUpdateSurfaces(ctx context.Context, writer *html.Writer) err
 		}
 
 		writer.Text(" ").Link(name, url).Text("\n")
-		updated.Surfaces[surface.ID] = surface
 	}
 
 	if err := flu.EncodeTo(flu.Gob(updated), s.File); err != nil {
 		return errors.Wrap(err, "save surfaces")
 	}
 
+	writer.Bold("\nOK")
 	logrus.WithField("service", "dooh").Info("updated surfaces")
 	return nil
 }
 
-func (s *Service) newHTMLWriter(ctx context.Context) *html.Writer {
+func (l *CommandListener) newHTMLWriter(ctx context.Context) *html.Writer {
 	return &html.Writer{
 		Context: ctx,
 		Out: &output.Paged{
 			Receiver: &receiver.Chat{
-				Sender:    s.TelegramClient,
-				ID:        s.ChatID,
-				ParseMode: telegram.HTML,
+				Sender:      l.TelegramClient,
+				ID:          l.ChatID,
+				ParseMode:   telegram.HTML,
+				ReplyMarkup: l.ControlButtons.Keyboard(l.ChatID, l.ChatID),
 			},
 			PageSize: telegram.MaxMessageSize,
 		},

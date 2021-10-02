@@ -108,11 +108,16 @@ func (app *Instance) Run(ctx context.Context) error {
 		}
 
 		var userIDs map[telegram.ID]bool
-		if control, ok := listener.(AccessControl); ok {
-			userIDs = control.AuthorizedUsers()
+		if control, ok := listener.(AuthorizedUsers); ok {
+			userIDs = control.AuthorizedUserIDs()
 		}
 
-		buttons.Add(commands, userIDs)
+		var chatIDs map[telegram.ID]bool
+		if control, ok := listener.(AuthorizedChats); ok {
+			chatIDs = control.AuthorizedChatIDs()
+		}
+
+		buttons.Add(commands, userIDs, chatIDs)
 		logrus.WithField("service", id).Infof("init ok")
 	}
 

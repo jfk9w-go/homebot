@@ -38,17 +38,18 @@ func (extension) Apply(ctx context.Context, app app.Interface, buttons *core.Con
 		return nil, errors.Wrap(err, "get bot")
 	}
 
-	service := &Service{
+	listener := &CommandListener{
 		Client:         NewClient(config.DOOH.Email, config.DOOH.Password),
 		TelegramClient: bot,
 		File:           config.DOOH.Data,
 		ChatID:         config.DOOH.ChatID,
+		ControlButtons: buttons,
 	}
 
-	if err := service.RunInBackground(ctx, config.DOOH.UpdateEvery.GetOrDefault(time.Hour)); err != nil {
+	if err := listener.RunInBackground(ctx, config.DOOH.UpdateEvery.GetOrDefault(time.Hour)); err != nil {
 		return nil, errors.Wrap(err, "run in background")
 	}
 
-	app.Manage(service)
-	return nil, nil
+	app.Manage(listener)
+	return listener, nil
 }

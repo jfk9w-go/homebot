@@ -25,6 +25,10 @@ type Extension interface {
 	Apply(ctx context.Context, app Interface, buttons *core.ControlButtons) (interface{}, error)
 }
 
-type AccessControl interface {
-	AuthorizedUsers() map[telegram.ID]bool
+type AuthorizedUsers interface {
+	AuthorizedUserIDs() map[telegram.ID]bool
+}
+
+type AuthorizedChats interface {
+	AuthorizedChatIDs() map[telegram.ID]bool
 }
