@@ -25,11 +25,12 @@ type CommandListener struct {
 	File           flu.File
 	ChatID         telegram.ID
 	ControlButtons *core.ControlButtons
+	mu             flu.Mutex
 	work           flu.WaitGroup
 	cancel         func()
 }
 
-func (l *CommandListener) AuthorizedChats() map[telegram.ID]bool {
+func (l *CommandListener) AuthorizedChatIDs() map[telegram.ID]bool {
 	return map[telegram.ID]bool{l.ChatID: true}
 }
 
@@ -69,8 +70,12 @@ func (l *CommandListener) Close() error {
 	return nil
 }
 
-func (l *CommandListener) Update_surfaces(ctx context.Context, _ telegram.Client, _ *telegram.Command) error {
-	return l.updateSurfaces(ctx)
+func (l *CommandListener) Update_surfaces(ctx context.Context, tgclient telegram.Client, cmd *telegram.Command) error {
+	if err := l.updateSurfaces(ctx); err != nil {
+		return errors.Wrap(err, "update surfaces")
+	}
+
+	return cmd.Reply(ctx, tgclient, "OK")
 }
 
 func (l *CommandListener) updateSurfaces(ctx context.Context) error {
@@ -95,6 +100,7 @@ func (l *CommandListener) updateSurfaces(ctx context.Context) error {
 }
 
 func (s *CommandListener) doUpdateSurfaces(ctx context.Context, writer *html.Writer) error {
+	defer s.mu.Lock().Unlock()
 	surfaces, err := s.Client.Surfaces(ctx)
 	if err != nil {
 		return errors.Wrap(err, "get surfaces")
