@@ -45,7 +45,9 @@ func (b *ControlButtons) Output(client telegram.Client, cmd *telegram.Command) *
 func (b *ControlButtons) Keyboard(userID, chatID telegram.ID) telegram.ReplyMarkup {
 	keyboard := make([][]telegram.Button, 0)
 	for _, row := range b.buttons {
-		if (row.userIDs == nil || userID == chatID && row.userIDs[userID]) && (row.chatIDs == nil || userID != chatID && row.chatIDs[chatID]) {
+		if row.userIDs == nil && row.chatIDs == nil ||
+			row.userIDs != nil && userID == chatID && row.userIDs[userID] ||
+			row.chatIDs != nil && userID != chatID && row.chatIDs[chatID] {
 			keyboard = append(keyboard, row.buttons)
 		}
 	}
