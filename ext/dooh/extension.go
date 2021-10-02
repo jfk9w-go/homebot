@@ -20,8 +20,8 @@ func (extension) ID() string {
 }
 
 func (extension) Apply(ctx context.Context, app app.Interface, buttons *core.ControlButtons) (interface{}, error) {
-	config := new(struct {
-		DOOH struct {
+	globalConfig := new(struct {
+		DOOH *struct {
 			Data            flu.File
 			UpdateEvery     flu.Duration
 			Email, Password string
@@ -29,8 +29,13 @@ func (extension) Apply(ctx context.Context, app app.Interface, buttons *core.Con
 		}
 	})
 
-	if err := app.GetConfig(config); err != nil {
+	if err := app.GetConfig(globalConfig); err != nil {
 		return nil, errors.Wrap(err, "get config")
+	}
+
+	config := globalConfig.DOOH
+	if config == nil {
+		return nil, nil
 	}
 
 	bot, err := app.GetBot(ctx)
@@ -39,14 +44,14 @@ func (extension) Apply(ctx context.Context, app app.Interface, buttons *core.Con
 	}
 
 	listener := &CommandListener{
-		Client:         NewClient(config.DOOH.Email, config.DOOH.Password),
+		Client:         NewClient(config.Email, config.Password),
 		TelegramClient: bot,
-		File:           config.DOOH.Data,
-		ChatID:         config.DOOH.ChatID,
+		File:           config.Data,
+		ChatID:         config.ChatID,
 		ControlButtons: buttons,
 	}
 
-	if err := listener.RunInBackground(ctx, config.DOOH.UpdateEvery.GetOrDefault(time.Hour)); err != nil {
+	if err := listener.RunInBackground(ctx, config.UpdateEvery.GetOrDefault(time.Hour)); err != nil {
 		return nil, errors.Wrap(err, "run in background")
 	}
 

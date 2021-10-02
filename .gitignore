@@ -1,5 +1,6 @@
 .idea/
 *.iml
 config.local.yml
-tdata.bin
+*.bin
 console.sql
+__debug_bin

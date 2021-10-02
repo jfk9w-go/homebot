@@ -75,5 +75,9 @@ func (l *CommandListener) Get_GPX_track(ctx context.Context, client telegram.Cli
 			Filename: filename},
 		&telegram.SendOptions{
 			ReplyMarkup: l.Keyboard(cmd.User.ID, cmd.Chat.ID)})
-	return err
+	if err != nil {
+		return errors.Wrap(err, "send gpx track")
+	}
+
+	return cmd.Reply(ctx, client, "OK")
 }

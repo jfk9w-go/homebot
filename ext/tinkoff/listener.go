@@ -80,5 +80,5 @@ func (l *CommandListener) Update_bank_statement(ctx context.Context, tgclient te
 		return errors.Wrap(err, "send reply")
 	}
 
-	return nil
+	return cmd.Reply(ctx, tgclient, "OK")
 }

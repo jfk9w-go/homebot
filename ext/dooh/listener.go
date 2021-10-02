@@ -121,10 +121,9 @@ func (s *CommandListener) doUpdateSurfaces(ctx context.Context, writer *html.Wri
 
 	for _, surface := range surfaces {
 		updated.Surfaces[surface.ID] = surface
-		name := fmt.Sprintf("[%s %s] %s",
+		externalID := fmt.Sprintf("[%s %s]",
 			surface.Attributes.Network,
-			surface.Attributes.SurfaceID,
-			surface.Attributes.Name)
+			surface.Attributes.SurfaceID)
 		url := ResourceURL("surfaces", surface.ID)
 		if entry, ok := existing.Surfaces[surface.ID]; ok {
 			if entry.Attributes.UpdatedAt != surface.Attributes.UpdatedAt {
@@ -142,7 +141,11 @@ func (s *CommandListener) doUpdateSurfaces(ctx context.Context, writer *html.Wri
 			writer.Bold("ADDED")
 		}
 
-		writer.Text(" ").Link(name, url).Text("\n")
+		writer.Text(" ").Link(externalID, url).Text(" " + surface.Attributes.Name).Text("\n")
+	}
+
+	if err := writer.Flush(); err != nil {
+		return errors.Wrap(err, "flush html writer")
 	}
 
 	if err := flu.EncodeTo(flu.Gob(updated), s.File); err != nil {
