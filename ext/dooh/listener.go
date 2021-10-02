@@ -156,7 +156,7 @@ func (l *CommandListener) newHTMLWriter(ctx context.Context) *html.Writer {
 				Sender:      l.TelegramClient,
 				ID:          l.ChatID,
 				ParseMode:   telegram.HTML,
-				ReplyMarkup: l.ControlButtons.Keyboard(l.ChatID, l.ChatID),
+				ReplyMarkup: l.ControlButtons.Keyboard(0, l.ChatID),
 			},
 			PageSize: telegram.MaxMessageSize,
 		},
