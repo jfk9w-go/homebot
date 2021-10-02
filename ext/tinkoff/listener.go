@@ -25,7 +25,7 @@ type CommandListener struct {
 	Executors   []Executor
 }
 
-func (l *CommandListener) AuthorizedUsers() map[telegram.ID]bool {
+func (l *CommandListener) AuthorizedUserIDs() map[telegram.ID]bool {
 	userIDs := make(map[telegram.ID]bool, len(l.Credentials))
 	for userID := range l.Credentials {
 		userIDs[userID] = true

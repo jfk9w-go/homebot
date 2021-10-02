@@ -20,7 +20,7 @@ type CommandListener struct {
 	Lookback time.Duration
 }
 
-func (l *CommandListener) AuthorizedUsers() map[telegram.ID]bool {
+func (l *CommandListener) AuthorizedUserIDs() map[telegram.ID]bool {
 	userIDs := make(map[telegram.ID]bool, len(l.UserIDs))
 	for userID := range l.UserIDs {
 		userIDs[userID] = true
