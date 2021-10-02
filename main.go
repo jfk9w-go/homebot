@@ -4,15 +4,13 @@ import (
 	"context"
 	"os"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/jfk9w-go/flu"
-
-	"github.com/jfk9w-go/homebot/ext/hassgpx"
-	"github.com/jfk9w-go/homebot/ext/tinkoff/sync"
-
 	"github.com/jfk9w-go/homebot/app"
+	"github.com/jfk9w-go/homebot/ext/dooh"
+	"github.com/jfk9w-go/homebot/ext/hassgpx"
 	"github.com/jfk9w-go/homebot/ext/tinkoff"
+	"github.com/jfk9w-go/homebot/ext/tinkoff/sync"
+	"github.com/sirupsen/logrus"
 )
 
 var GitCommit = "dev"
@@ -34,6 +32,7 @@ func main() {
 	app.ApplyExtensions(
 		hassgpx.Extension,
 		tinkoff.Extension{sync.Accounts, sync.TradingOperations, sync.PurchasedSecurities},
+		dooh.Extension,
 	)
 
 	if err := app.Run(ctx); err != nil {

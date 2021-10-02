@@ -18,6 +18,7 @@ type Instance struct {
 	extensions []Extension
 	databases  map[string]*gorm.DB
 	buttons    *core.ControlButtons
+	bot        *telegram.Bot
 }
 
 func Create(version string, clock flu.Clock, config flu.File) (*Instance, error) {
@@ -60,12 +61,21 @@ func (app *Instance) GetControlButtons() *core.ControlButtons {
 	return app.buttons
 }
 
-func (app *Instance) Run(ctx context.Context) error {
-	config := new(struct{ Telegram struct{ Token string } })
-	if err := app.GetConfig(config); err != nil {
-		return errors.Wrap(err, "get config")
+func (app *Instance) GetBot(ctx context.Context) (*telegram.Bot, error) {
+	if app.bot != nil {
+		return app.bot, nil
 	}
 
+	config := new(struct{ Telegram struct{ Token string } })
+	if err := app.GetConfig(config); err != nil {
+		return nil, errors.Wrap(err, "get config")
+	}
+
+	app.bot = telegram.NewBot(ctx, nil, config.Telegram.Token)
+	return app.bot, nil
+}
+
+func (app *Instance) Run(ctx context.Context) error {
 	registry := make(telegram.CommandRegistry)
 	buttons := core.NewControlButtons()
 	registry.AddFunc("/start", func(ctx context.Context, client telegram.Client, cmd *telegram.Command) error {
@@ -76,9 +86,9 @@ func (app *Instance) Run(ctx context.Context) error {
 		return output.Flush(ctx)
 	})
 
-	for _, plugin := range app.extensions {
-		id := plugin.ID()
-		listener, err := plugin.Apply(ctx, app, buttons)
+	for _, extension := range app.extensions {
+		id := extension.ID()
+		listener, err := extension.Apply(ctx, app, buttons)
 		if err != nil {
 			return errors.Wrapf(err, "apply plugin %s", id)
 		}
@@ -104,7 +114,11 @@ func (app *Instance) Run(ctx context.Context) error {
 		logrus.WithField("service", id).Infof("init ok")
 	}
 
-	bot := telegram.NewBot(ctx, nil, config.Telegram.Token)
+	bot, err := app.GetBot(ctx)
+	if err != nil {
+		return errors.Wrap(err, "get bot")
+	}
+
 	app.Manage(bot.CommandListener(registry))
 	return nil
 }

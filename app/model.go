@@ -16,6 +16,7 @@ type Interface interface {
 	GetConfig(value interface{}) error
 	GetMetricsRegistry(ctx context.Context) (metrics.Registry, error)
 	GetDatabase(conn string) (*gorm.DB, error)
+	GetBot(ctx context.Context) (*telegram.Bot, error)
 	Manage(service io.Closer)
 }
 
