@@ -24,15 +24,3 @@ type Extension interface {
 	ID() string
 	Apply(ctx context.Context, app Interface, buttons *core.ControlButtons) (interface{}, error)
 }
-
-type Gate interface {
-	Allow(chatID, userID telegram.ID) bool
-}
-
-var Public Gate = public{}
-
-type public struct{}
-
-func (public) Allow(chatID, userID telegram.ID) bool {
-	return true
-}

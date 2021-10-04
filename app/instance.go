@@ -99,7 +99,7 @@ func (app *Instance) Run(ctx context.Context) error {
 			commands := telegram.CommandRegistryFrom(listener)
 			gate, ok := listener.(core.Gate)
 			if !ok {
-				gate = Public
+				gate = core.Public
 			}
 
 			for key, command := range commands {
