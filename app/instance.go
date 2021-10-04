@@ -107,13 +107,7 @@ func (app *Instance) Run(ctx context.Context) error {
 					logrus.Fatalf("duplicate command handler for %s@%s", key, id)
 				}
 
-				registry[key] = telegram.CommandListenerFunc(func(ctx context.Context, client telegram.Client, cmd *telegram.Command) error {
-					if gate.Allow(cmd.Chat.ID, cmd.User.ID) {
-						return command.OnCommand(ctx, client, cmd)
-					}
-
-					return errors.New("forbidden")
-				})
+				registry[key] = core.ApplyGate(gate, command)
 			}
 
 			buttons.Add(commands, gate)

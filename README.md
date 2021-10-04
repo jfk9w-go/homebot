@@ -50,7 +50,7 @@ If an extension configuration node is not present, the extension is disabled.
 
 This extension provides the ability to synchronize your Tinkoff bank and trading operations to a PostgreSQL database instance.
 
-Exposes `/Update_bank_statement` command.
+Exposes `/update_bank_statement` command.
 
 #### Configuration
 
@@ -73,7 +73,7 @@ tinkoff:
 This extension provides the ability to get a GPX track from your Home Assistant location data.
 The GPX track is generated only with data inside the current UTC day. Some assumptions are made (see configuration below for details).
 
-Exposes `/Get_GPX_track` command.
+Exposes `/get_GPX_track` command.
 
 #### Configuration
 
