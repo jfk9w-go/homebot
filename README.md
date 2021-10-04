@@ -88,6 +88,11 @@ hassgpx:
   # Last days to process. The default is 0 (only today).
   # 1 would mean "process yesterday and today" and so forth.
   lastdays: 0
+  # Move tracking interval. The default is 1 minute.
+  # Must use format 1h, 5m or 10s.
+  # Note that while OwnTracks for Android allows you to set move tracking interval,
+  # it seems to always use 30 seconds.
+  moveinterval: 1m
   # Telegram user ID => entity ID map.
   # We use "like" in order to match entity records.
   users:

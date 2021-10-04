@@ -2,7 +2,9 @@ package hassgpx
 
 import (
 	"context"
+	"time"
 
+	"github.com/jfk9w-go/flu"
 	"github.com/jfk9w-go/homebot/app"
 	"github.com/jfk9w-go/homebot/core"
 	telegram "github.com/jfk9w-go/telegram-bot-api"
@@ -20,10 +22,11 @@ func (extension) ID() string {
 func (extension) Apply(_ context.Context, app app.Interface, buttons *core.ControlButtons) (interface{}, error) {
 	globalConfig := new(struct {
 		HassGPX *struct {
-			Database string
-			MaxSpeed *float64
-			LastDays int
-			Users    map[telegram.ID]string
+			Database     string
+			MaxSpeed     *float64
+			LastDays     int
+			MoveInterval flu.Duration
+			Users        map[telegram.ID]string
 		}
 	})
 
@@ -54,5 +57,6 @@ func (extension) Apply(_ context.Context, app app.Interface, buttons *core.Contr
 		UserIDs:        config.Users,
 		MaxSpeed:       maxSpeed,
 		LastDays:       config.LastDays,
+		MoveInterval:   config.MoveInterval.GetOrDefault(time.Minute),
 	}, nil
 }

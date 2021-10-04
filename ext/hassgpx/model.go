@@ -41,5 +41,5 @@ type Waypoint struct {
 }
 
 type Storage interface {
-	GetLastTrack(ctx context.Context, entityID string, since time.Time, maxSpeed float64) ([]Waypoint, error)
+	GetLastTrack(ctx context.Context, entityID string, since time.Time, maxSpeed float64, moveInterval time.Duration) ([]Waypoint, error)
 }

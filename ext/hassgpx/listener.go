@@ -16,9 +16,10 @@ type CommandListener struct {
 	flu.Clock
 	Storage
 	*core.ControlButtons
-	UserIDs  map[telegram.ID]string
-	LastDays int
-	MaxSpeed float64
+	UserIDs      map[telegram.ID]string
+	LastDays     int
+	MaxSpeed     float64
+	MoveInterval time.Duration
 }
 
 func (l *CommandListener) AuthorizedUserIDs() map[telegram.ID]bool {
@@ -38,7 +39,7 @@ func (l *CommandListener) Get_GPX_track(ctx context.Context, client telegram.Cli
 
 	since := l.Now().Add(-time.Duration(l.LastDays) * 24 * time.Hour)
 	since = time.Date(since.Year(), since.Month(), since.Day(), 0, 0, 0, 0, time.UTC)
-	waypoints, err := l.GetLastTrack(ctx, entityID, since, l.MaxSpeed)
+	waypoints, err := l.GetLastTrack(ctx, entityID, since, l.MaxSpeed, l.MoveInterval)
 	if err != nil {
 		return errors.Wrap(err, "get last track")
 	}
