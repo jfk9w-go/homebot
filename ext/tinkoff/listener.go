@@ -25,13 +25,9 @@ type CommandListener struct {
 	Executors   []Executor
 }
 
-func (l *CommandListener) AuthorizedUserIDs() map[telegram.ID]bool {
-	userIDs := make(map[telegram.ID]bool, len(l.Credentials))
-	for userID := range l.Credentials {
-		userIDs[userID] = true
-	}
-
-	return userIDs
+func (l *CommandListener) Allow(chatID, userID telegram.ID) bool {
+	_, ok := l.Credentials[userID]
+	return ok && chatID == userID
 }
 
 func (l *CommandListener) Update_bank_statement(ctx context.Context, tgclient telegram.Client, cmd *telegram.Command) error {

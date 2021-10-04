@@ -22,13 +22,9 @@ type CommandListener struct {
 	MoveInterval time.Duration
 }
 
-func (l *CommandListener) AuthorizedUserIDs() map[telegram.ID]bool {
-	userIDs := make(map[telegram.ID]bool, len(l.UserIDs))
-	for userID := range l.UserIDs {
-		userIDs[userID] = true
-	}
-
-	return userIDs
+func (l *CommandListener) Allow(chatID, userID telegram.ID) bool {
+	_, ok := l.UserIDs[userID]
+	return ok && chatID == userID
 }
 
 func (l *CommandListener) Get_GPX_track(ctx context.Context, client telegram.Client, cmd *telegram.Command) error {
@@ -77,7 +73,7 @@ func (l *CommandListener) Get_GPX_track(ctx context.Context, client telegram.Cli
 			Input:    buffer,
 			Filename: filename},
 		&telegram.SendOptions{
-			ReplyMarkup: l.Keyboard(cmd.User.ID, cmd.Chat.ID)})
+			ReplyMarkup: l.Keyboard(cmd.Chat.ID, cmd.User.ID)})
 	if err != nil {
 		return errors.Wrap(err, "send gpx track")
 	}

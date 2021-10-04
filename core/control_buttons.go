@@ -8,10 +8,13 @@ import (
 	"github.com/jfk9w-go/telegram-bot-api/ext/receiver"
 )
 
+type Gate interface {
+	Allow(chatID, userID telegram.ID) bool
+}
+
 type controlButtonsRow struct {
 	buttons []telegram.Button
-	userIDs map[telegram.ID]bool
-	chatIDs map[telegram.ID]bool
+	gate    Gate
 }
 
 type ControlButtons struct {
@@ -22,13 +25,13 @@ func NewControlButtons() *ControlButtons {
 	return &ControlButtons{buttons: make([]controlButtonsRow, 0)}
 }
 
-func (b *ControlButtons) Add(commands telegram.CommandRegistry, userIDs map[telegram.ID]bool, chatIDs map[telegram.ID]bool) {
+func (b *ControlButtons) Add(commands telegram.CommandRegistry, gate Gate) {
 	buttons := make([]telegram.Button, len(commands))
 	for key := range commands {
 		buttons = append(buttons, (&telegram.Command{Key: key}).Button(humanizeKey(key)))
 	}
 
-	b.buttons = append(b.buttons, controlButtonsRow{buttons, userIDs, chatIDs})
+	b.buttons = append(b.buttons, controlButtonsRow{buttons, gate})
 }
 
 func (b *ControlButtons) Output(client telegram.Client, cmd *telegram.Command) *output.Paged {
@@ -36,18 +39,16 @@ func (b *ControlButtons) Output(client telegram.Client, cmd *telegram.Command) *
 		Receiver: &receiver.Chat{
 			Sender:      client,
 			ID:          cmd.Chat.ID,
-			ReplyMarkup: b.Keyboard(cmd.User.ID, cmd.Chat.ID),
+			ReplyMarkup: b.Keyboard(cmd.Chat.ID, cmd.User.ID),
 		},
 		PageSize: telegram.MaxMessageSize,
 	}
 }
 
-func (b *ControlButtons) Keyboard(userID, chatID telegram.ID) telegram.ReplyMarkup {
+func (b *ControlButtons) Keyboard(chatID, userID telegram.ID) telegram.ReplyMarkup {
 	keyboard := make([][]telegram.Button, 0)
 	for _, row := range b.buttons {
-		if row.userIDs == nil && row.chatIDs == nil ||
-			row.userIDs != nil && userID == chatID && row.userIDs[userID] ||
-			row.chatIDs != nil && userID != chatID && row.chatIDs[chatID] {
+		if row.gate.Allow(chatID, userID) {
 			keyboard = append(keyboard, row.buttons)
 		}
 	}

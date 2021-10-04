@@ -30,8 +30,8 @@ type CommandListener struct {
 	cancel         func()
 }
 
-func (l *CommandListener) AuthorizedChatIDs() map[telegram.ID]bool {
-	return map[telegram.ID]bool{l.ChatID: true}
+func (l *CommandListener) Allow(chatID, userID telegram.ID) bool {
+	return l.ChatID == chatID
 }
 
 func (l *CommandListener) RunInBackground(ctx context.Context, updateEvery time.Duration) error {
@@ -164,7 +164,7 @@ func (l *CommandListener) newHTMLWriter(ctx context.Context) *html.Writer {
 				Sender:      l.TelegramClient,
 				ID:          l.ChatID,
 				ParseMode:   telegram.HTML,
-				ReplyMarkup: l.ControlButtons.Keyboard(0, l.ChatID),
+				ReplyMarkup: l.ControlButtons.Keyboard(l.ChatID, 0),
 			},
 			PageSize: telegram.MaxMessageSize,
 		},

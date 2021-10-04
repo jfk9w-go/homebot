@@ -25,10 +25,14 @@ type Extension interface {
 	Apply(ctx context.Context, app Interface, buttons *core.ControlButtons) (interface{}, error)
 }
 
-type AuthorizedUsers interface {
-	AuthorizedUserIDs() map[telegram.ID]bool
+type Gate interface {
+	Allow(chatID, userID telegram.ID) bool
 }
 
-type AuthorizedChats interface {
-	AuthorizedChatIDs() map[telegram.ID]bool
+var Public Gate = public{}
+
+type public struct{}
+
+func (public) Allow(chatID, userID telegram.ID) bool {
+	return true
 }

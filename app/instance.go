@@ -95,29 +95,30 @@ func (app *Instance) Run(ctx context.Context) error {
 			return errors.Wrapf(err, "apply plugin %s", id)
 		}
 
-		var commands telegram.CommandRegistry
 		if listener != nil {
-			commands = telegram.CommandRegistryFrom(listener)
+			commands := telegram.CommandRegistryFrom(listener)
+			gate, ok := listener.(core.Gate)
+			if !ok {
+				gate = Public
+			}
+
 			for key, command := range commands {
 				if _, ok := registry[key]; ok {
 					logrus.Fatalf("duplicate command handler for %s@%s", key, id)
 				}
 
-				registry[key] = command
+				registry[key] = telegram.CommandListenerFunc(func(ctx context.Context, client telegram.Client, cmd *telegram.Command) error {
+					if gate.Allow(cmd.Chat.ID, cmd.User.ID) {
+						return command.OnCommand(ctx, client, cmd)
+					}
+
+					return errors.New("forbidden")
+				})
 			}
+
+			buttons.Add(commands, gate)
 		}
 
-		var userIDs map[telegram.ID]bool
-		if control, ok := listener.(AuthorizedUsers); ok {
-			userIDs = control.AuthorizedUserIDs()
-		}
-
-		var chatIDs map[telegram.ID]bool
-		if control, ok := listener.(AuthorizedChats); ok {
-			chatIDs = control.AuthorizedChatIDs()
-		}
-
-		buttons.Add(commands, userIDs, chatIDs)
 		logrus.WithField("service", id).Infof("init ok")
 	}
 
