@@ -22,6 +22,7 @@ func (extension) Apply(_ context.Context, app app.Interface, buttons *core.Contr
 		HassGPX *struct {
 			Database string
 			MaxSpeed *float64
+			LastDays int
 			Users    map[telegram.ID]string
 		}
 	})
@@ -52,5 +53,6 @@ func (extension) Apply(_ context.Context, app app.Interface, buttons *core.Contr
 		ControlButtons: buttons,
 		UserIDs:        config.Users,
 		MaxSpeed:       maxSpeed,
+		LastDays:       config.LastDays,
 	}, nil
 }
