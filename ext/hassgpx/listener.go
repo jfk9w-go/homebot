@@ -17,7 +17,8 @@ type CommandListener struct {
 	Storage
 	*core.ControlButtons
 	UserIDs  map[telegram.ID]string
-	Lookback time.Duration
+	LastDays int
+	MaxSpeed float64
 }
 
 func (l *CommandListener) AuthorizedUserIDs() map[telegram.ID]bool {
@@ -35,8 +36,9 @@ func (l *CommandListener) Get_GPX_track(ctx context.Context, client telegram.Cli
 		return errors.New("unknown user")
 	}
 
-	since := l.Now().Add(-l.Lookback)
-	waypoints, err := l.GetLastTrack(ctx, entityID, since)
+	since := l.Now().Add(-time.Duration(l.LastDays) * 24 * time.Hour)
+	since = time.Date(since.Year(), since.Month(), since.Day(), 0, 0, 0, 0, time.UTC)
+	waypoints, err := l.GetLastTrack(ctx, entityID, since, l.MaxSpeed)
 	if err != nil {
 		return errors.Wrap(err, "get last track")
 	}

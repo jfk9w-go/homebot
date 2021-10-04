@@ -2,9 +2,7 @@ package hassgpx
 
 import (
 	"context"
-	"time"
 
-	"github.com/jfk9w-go/flu"
 	"github.com/jfk9w-go/homebot/app"
 	"github.com/jfk9w-go/homebot/core"
 	telegram "github.com/jfk9w-go/telegram-bot-api"
@@ -20,25 +18,31 @@ func (extension) ID() string {
 }
 
 func (extension) Apply(_ context.Context, app app.Interface, buttons *core.ControlButtons) (interface{}, error) {
-	config := new(struct {
+	globalConfig := new(struct {
 		HassGPX *struct {
 			Database string
-			Lookback flu.Duration
+			MaxSpeed *float64
 			Users    map[telegram.ID]string
 		}
 	})
 
-	if err := app.GetConfig(config); err != nil {
+	if err := app.GetConfig(globalConfig); err != nil {
 		return nil, errors.Wrap(err, "get config")
 	}
 
-	if config.HassGPX == nil {
+	config := globalConfig.HassGPX
+	if config == nil {
 		return nil, nil
 	}
 
-	db, err := app.GetDatabase(config.HassGPX.Database)
+	db, err := app.GetDatabase(config.Database)
 	if err != nil {
 		return nil, errors.Wrap(err, "get database")
+	}
+
+	maxSpeed := 55.
+	if config.MaxSpeed != nil {
+		maxSpeed = *config.MaxSpeed
 	}
 
 	storage := (*SQLStorage)(db)
@@ -46,7 +50,7 @@ func (extension) Apply(_ context.Context, app app.Interface, buttons *core.Contr
 		Clock:          app,
 		Storage:        storage,
 		ControlButtons: buttons,
-		UserIDs:          config.HassGPX.Users,
-		Lookback:       config.HassGPX.Lookback.GetOrDefault(24 * time.Hour),
+		UserIDs:        config.Users,
+		MaxSpeed:       maxSpeed,
 	}, nil
 }
