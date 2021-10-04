@@ -28,11 +28,7 @@ func (l *CommandListener) Allow(chatID, userID telegram.ID) bool {
 }
 
 func (l *CommandListener) Get_GPX_track(ctx context.Context, client telegram.Client, cmd *telegram.Command) error {
-	entityID, ok := l.UserIDs[cmd.User.ID]
-	if !ok {
-		return errors.New("unknown user")
-	}
-
+	entityID := l.UserIDs[cmd.User.ID]
 	since := l.Now().Add(-time.Duration(l.LastDays) * 24 * time.Hour)
 	since = time.Date(since.Year(), since.Month(), since.Day(), 0, 0, 0, 0, time.UTC)
 	waypoints, err := l.GetLastTrack(ctx, entityID, since, l.MaxSpeed, l.MoveInterval)

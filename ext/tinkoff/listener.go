@@ -31,11 +31,7 @@ func (l *CommandListener) Allow(chatID, userID telegram.ID) bool {
 }
 
 func (l *CommandListener) Update_bank_statement(ctx context.Context, tgclient telegram.Client, cmd *telegram.Command) error {
-	cred, ok := l.Credentials[cmd.User.ID]
-	if !ok {
-		return errors.New("unknown user")
-	}
-
+	cred := l.Credentials[cmd.User.ID]
 	client, err := external.Authorize(ctx, cred.Username, cred.Password, func(ctx context.Context) (string, error) {
 		ctx, cancel := context.WithTimeout(ctx, time.Minute)
 		defer cancel()
