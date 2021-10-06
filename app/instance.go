@@ -11,6 +11,8 @@ import (
 	telegram "github.com/jfk9w-go/telegram-bot-api"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
+	"gorm.io/driver/clickhouse"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
@@ -39,12 +41,22 @@ func (app *Instance) ApplyExtensions(extensions ...Extension) {
 	app.extensions = append(app.extensions, extensions...)
 }
 
-func (app *Instance) GetDatabase(conn string) (*gorm.DB, error) {
+func (app *Instance) GetDatabase(driver, conn string) (*gorm.DB, error) {
 	if db, ok := app.databases[conn]; ok {
 		return db, nil
 	}
 
-	db, err := gormutil.NewPostgres(conn)
+	var dialector gorm.Dialector
+	switch driver {
+	case "postgres":
+		dialector = postgres.Open(conn)
+	case "clickhouse":
+		dialector = clickhouse.Open(conn)
+	default:
+		logrus.Fatalf("unknown dialect %s for %s", driver, conn)
+	}
+
+	db, err := gorm.Open(dialector, gormutil.DefaultConfig)
 	if err != nil {
 		return nil, errors.Wrapf(err, "create database for %s", conn)
 	}

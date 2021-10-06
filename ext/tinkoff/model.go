@@ -44,7 +44,7 @@ func (s *Sync) Run(ctx context.Context, executor Executor) error {
 			s.report.Error(name, err.Error())
 		}
 	} else {
-		s.report.Success(name, "%d", count)
+		s.report.Info(name, "%d", count)
 	}
 
 	return nil

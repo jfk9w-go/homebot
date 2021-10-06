@@ -39,7 +39,7 @@ func (extension) Apply(_ context.Context, app app.Interface, buttons *core.Contr
 		return nil, nil
 	}
 
-	db, err := app.GetDatabase(config.Database)
+	db, err := app.GetDatabase("postgres", config.Database)
 	if err != nil {
 		return nil, errors.Wrap(err, "get database")
 	}

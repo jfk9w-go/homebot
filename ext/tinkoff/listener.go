@@ -9,7 +9,6 @@ import (
 	"github.com/jfk9w-go/homebot/core"
 	"github.com/jfk9w-go/homebot/ext/tinkoff/external"
 	telegram "github.com/jfk9w-go/telegram-bot-api"
-	"github.com/pkg/errors"
 )
 
 type Context struct {
@@ -61,15 +60,8 @@ func (l *CommandListener) Update_bank_statement(ctx context.Context, tgclient te
 		}
 	}
 
-	output := l.ControlButtons.Output(tgclient, cmd)
-	for _, line := range report.Dump() {
-		if err := output.WriteUnbreakable(ctx, line+"\n"); err != nil {
-			return errors.Wrap(err, "send reply")
-		}
-	}
-
-	if err := output.Flush(ctx); err != nil {
-		return errors.Wrap(err, "send reply")
+	if err := report.DumpTo(ctx, l.ControlButtons.Output(tgclient, cmd)); err != nil {
+		return err
 	}
 
 	return cmd.Reply(ctx, tgclient, "OK")

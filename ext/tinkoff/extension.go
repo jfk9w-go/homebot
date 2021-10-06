@@ -40,7 +40,7 @@ func (e Extension) Apply(ctx context.Context, app app.Interface, buttons *core.C
 		return nil, nil
 	}
 
-	db, err := app.GetDatabase(config.Tinkoff.Database)
+	db, err := app.GetDatabase("postgres", config.Tinkoff.Database)
 	if err != nil {
 		return nil, errors.Wrap(err, "get database")
 	}

@@ -3,26 +3,32 @@ module github.com/jfk9w-go/homebot
 go 1.17
 
 require (
-	github.com/jfk9w-go/flu v0.9.28
+	github.com/jasonlvhit/gocron v0.0.1
+	github.com/jfk9w-go/flu v0.9.29
 	github.com/jfk9w-go/telegram-bot-api v0.9.26
 	github.com/pkg/errors v0.9.1
 	github.com/sirupsen/logrus v1.8.1
 	gopkg.in/guregu/null.v3 v3.5.0
+	gorm.io/driver/clickhouse v0.2.1
+	gorm.io/driver/postgres v1.1.0
 	gorm.io/gorm v1.21.15
 )
 
 require (
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
+	github.com/ClickHouse/clickhouse-go v1.4.9 // indirect
 	github.com/Microsoft/go-winio v0.5.0 // indirect
 	github.com/Nvveen/Gotty v0.0.0-20120604004816-cd527374f1e5 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
+	github.com/cloudflare/golz4 v0.0.0-20150217214814-ef862a3cdc58 // indirect
 	github.com/containerd/continuity v0.1.0 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
+	github.com/hashicorp/go-version v1.3.0 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.10.0 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
@@ -49,5 +55,4 @@ require (
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
-	gorm.io/driver/postgres v1.1.0 // indirect
 )

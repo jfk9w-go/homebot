@@ -6,7 +6,8 @@ import (
 
 	"github.com/jfk9w-go/flu"
 	"github.com/jfk9w-go/homebot/app"
-	"github.com/jfk9w-go/homebot/ext/dooh"
+	"github.com/jfk9w-go/homebot/ext/dooh/reports"
+	"github.com/jfk9w-go/homebot/ext/dooh/surfaces"
 	"github.com/jfk9w-go/homebot/ext/hassgpx"
 	"github.com/jfk9w-go/homebot/ext/tinkoff"
 	"github.com/jfk9w-go/homebot/ext/tinkoff/sync"
@@ -32,7 +33,8 @@ func main() {
 	app.ApplyExtensions(
 		hassgpx.Extension,
 		tinkoff.Extension{sync.Accounts, sync.TradingOperations, sync.PurchasedSecurities},
-		dooh.Extension,
+		surfaces.Extension,
+		reports.Extension,
 	)
 
 	if err := app.Run(ctx); err != nil {
