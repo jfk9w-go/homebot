@@ -2,10 +2,11 @@ package reports
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"time"
 
-	"github.com/jasonlvhit/gocron"
+	"github.com/go-co-op/gocron"
 	"github.com/jfk9w-go/flu"
 	"github.com/jfk9w-go/homebot/core"
 	"github.com/jfk9w-go/homebot/ext/dooh"
@@ -33,13 +34,19 @@ func (s *Service) RunInBackground(ctx context.Context, at string) error {
 		return nil
 	}
 
-	s.scheduler = gocron.NewScheduler()
-	return s.scheduler.Every(1).Day().At(at).Do(s.run, context.Background())
+	s.scheduler = gocron.NewScheduler(time.UTC)
+	if job, err := s.scheduler.Every(1).Day().At(at).Do(s.run, context.Background()); err != nil {
+		job.SingletonMode()
+		return err
+	}
+
+	return nil
 }
 
 func (s *Service) Close() error {
 	if s.scheduler != nil {
 		s.scheduler.Clear()
+		s.scheduler.Stop()
 	}
 
 	return nil
@@ -55,7 +62,7 @@ func (s *Service) Check_reports(ctx context.Context, tgclient telegram.Client, c
 
 func (s *Service) run(ctx context.Context) error {
 	report := core.NewJobReport()
-	report.Title("Сравнение отчетов ГПМ vs GI")
+	report.Title(fmt.Sprintf("Сравнение отчетов ГПМ vs GI (%d дней)", s.LastDays))
 	if err := s.runWith(ctx, report); err != nil {
 		if flu.IsContextRelated(err) {
 			return err
