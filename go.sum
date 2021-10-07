@@ -331,8 +331,8 @@ github.com/jasonlvhit/gocron v0.0.1/go.mod h1:k9a3TV8VcU73XZxfVHCHWMWF9SOqgoku0/
 github.com/jfk9w-go/flu v0.9.27/go.mod h1:mVl382GTXeCykmO0vkRVeU08cmH0dieMQv6dt3E8kQ0=
 github.com/jfk9w-go/flu v0.9.29 h1:9h4o/q9Ud44Q6rjKuu1lcTAhrVO/mzkrLoup3gGE1tU=
 github.com/jfk9w-go/flu v0.9.29/go.mod h1:mVl382GTXeCykmO0vkRVeU08cmH0dieMQv6dt3E8kQ0=
-github.com/jfk9w-go/telegram-bot-api v0.9.26 h1:qK4snMI4HrtW1IFq6cxS9oumkDbSUJ3pDeqAN594XsY=
-github.com/jfk9w-go/telegram-bot-api v0.9.26/go.mod h1:XYbmuc27jMj/QzdU7XImaV6Af/xs541wfOPjqyT9xsA=
+github.com/jfk9w-go/telegram-bot-api v0.9.27 h1:hKrhmjMooFkdO6aZyrn3Uexhydzal7UAKkz7ZbCsETs=
+github.com/jfk9w-go/telegram-bot-api v0.9.27/go.mod h1:XYbmuc27jMj/QzdU7XImaV6Af/xs541wfOPjqyT9xsA=
 github.com/jinzhu/inflection v1.0.0 h1:K317FqzuhWc8YvSVlFMCCUb36O/S9MCKRDI7QkRKD/E=
 github.com/jinzhu/inflection v1.0.0/go.mod h1:h+uFLlag+Qp1Va5pdKtLDYj+kHp5pxUVkryuEj+Srlc=
 github.com/jinzhu/now v1.1.2 h1:eVKgfIdy9b6zbWBMgFpfDPoAMifwSZagU9HmEU6zgiI=

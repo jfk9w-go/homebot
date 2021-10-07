@@ -6,7 +6,6 @@ import (
 
 	"github.com/jfk9w-go/flu"
 	"github.com/jfk9w-go/homebot/app"
-	"github.com/jfk9w-go/homebot/core"
 	"github.com/jfk9w-go/homebot/ext/dooh"
 	"github.com/jfk9w-go/telegram-bot-api"
 	"github.com/pkg/errors"
@@ -20,7 +19,7 @@ func (extension) ID() string {
 	return "dooh_surfaces"
 }
 
-func (extension) Apply(ctx context.Context, app app.Interface, buttons *core.ControlButtons) (interface{}, error) {
+func (extension) Apply(ctx context.Context, app app.Interface) (interface{}, error) {
 	globalConfig := new(struct {
 		DOOH struct {
 			Surfaces *struct {
@@ -48,11 +47,10 @@ func (extension) Apply(ctx context.Context, app app.Interface, buttons *core.Con
 		return nil, errors.Wrap(err, "get bot")
 	}
 
-	checker := &Checker{
+	checker := &Service{
 		Service: &dooh.Service{
 			ChatID:   chatID,
 			TgClient: bot,
-			Buttons:  buttons,
 		},
 		ApiClient: NewApiClient(config.Email, config.Password),
 		File:      config.Data,

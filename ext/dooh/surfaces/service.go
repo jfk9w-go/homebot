@@ -17,7 +17,7 @@ type SurfaceDictionary struct {
 	Surfaces map[string]Surface
 }
 
-type Checker struct {
+type Service struct {
 	*dooh.Service
 	ApiClient *ApiClient
 	File      flu.File
@@ -27,16 +27,16 @@ type Checker struct {
 	cancel func()
 }
 
-func (c *Checker) RunInBackground(ctx context.Context, every time.Duration) error {
-	if c.cancel != nil {
+func (s *Service) RunInBackground(ctx context.Context, every time.Duration) error {
+	if s.cancel != nil {
 		return nil
 	}
 
-	if err := c.run(ctx); err != nil {
+	if err := s.run(ctx); err != nil {
 		return err
 	}
 
-	c.cancel = c.work.Go(ctx, func(ctx context.Context) {
+	s.cancel = s.work.Go(ctx, func(ctx context.Context) {
 		ticker := time.NewTicker(every)
 		defer ticker.Stop()
 		for {
@@ -44,7 +44,7 @@ func (c *Checker) RunInBackground(ctx context.Context, every time.Duration) erro
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
-				if err := c.run(ctx); err != nil {
+				if err := s.run(ctx); err != nil {
 					return
 				}
 			}
@@ -54,30 +54,30 @@ func (c *Checker) RunInBackground(ctx context.Context, every time.Duration) erro
 	return nil
 }
 
-func (c *Checker) Close() error {
-	if c.cancel != nil {
-		c.cancel()
-		c.work.Wait()
+func (s *Service) Close() error {
+	if s.cancel != nil {
+		s.cancel()
+		s.work.Wait()
 	}
 
 	return nil
 }
 
-func (c *Checker) Update_surfaces(ctx context.Context, tgclient telegram.Client, cmd *telegram.Command) error {
-	if err := c.run(ctx); err != nil {
+func (s *Service) Update_surfaces(ctx context.Context, tgclient telegram.Client, cmd *telegram.Command) error {
+	if err := s.run(ctx); err != nil {
 		return errors.Wrap(err, "update surfaces")
 	}
 
 	return cmd.Reply(ctx, tgclient, "OK")
 }
 
-func (c *Checker) run(ctx context.Context) error {
+func (s *Service) run(ctx context.Context) error {
 	writer := &html.Writer{
 		Context: ctx,
-		Out:     c.NewOutput(),
+		Out:     s.NewOutput(),
 	}
 
-	if err := c.runWith(ctx, writer); err != nil {
+	if err := s.runWith(ctx, writer); err != nil {
 		if flu.IsContextRelated(err) {
 			return err
 		}
@@ -96,16 +96,16 @@ func (c *Checker) run(ctx context.Context) error {
 	return nil
 }
 
-func (c *Checker) runWith(ctx context.Context, html *html.Writer) error {
-	defer c.mu.Lock().Unlock()
-	surfaces, err := c.ApiClient.Surfaces(ctx)
+func (s *Service) runWith(ctx context.Context, html *html.Writer) error {
+	defer s.mu.Lock().Unlock()
+	surfaces, err := s.ApiClient.Surfaces(ctx)
 	if err != nil {
 		return errors.Wrap(err, "get surfaces")
 	}
 
 	existing := new(SurfaceDictionary)
-	if ok, err := c.File.Exists(); ok {
-		if err := flu.DecodeFrom(c.File, flu.Gob(existing)); err != nil {
+	if ok, err := s.File.Exists(); ok {
+		if err := flu.DecodeFrom(s.File, flu.Gob(existing)); err != nil {
 			return errors.Wrap(err, "decode file")
 		}
 	} else if err != nil {
@@ -145,7 +145,7 @@ func (c *Checker) runWith(ctx context.Context, html *html.Writer) error {
 		return errors.Wrap(err, "flush html writer")
 	}
 
-	if err := flu.EncodeTo(flu.Gob(updated), c.File); err != nil {
+	if err := flu.EncodeTo(flu.Gob(updated), s.File); err != nil {
 		return errors.Wrap(err, "save surfaces")
 	}
 

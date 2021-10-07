@@ -2,10 +2,7 @@ package reports
 
 import (
 	"context"
-	"fmt"
-	"math"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/jasonlvhit/gocron"
@@ -21,7 +18,7 @@ var Values = []string{"bids", "shows"}
 
 type Data map[string]map[string]float64
 
-type Checker struct {
+type Service struct {
 	*dooh.Service
 	Clock          flu.Clock
 	QueryApiClient *QueryApiClient
@@ -31,36 +28,35 @@ type Checker struct {
 	scheduler      *gocron.Scheduler
 }
 
-func (c *Checker) RunInBackground(ctx context.Context, at string) error {
-	if c.scheduler != nil {
+func (s *Service) RunInBackground(ctx context.Context, at string) error {
+	if s.scheduler != nil {
 		return nil
 	}
 
-	c.scheduler = gocron.NewScheduler()
-	c.scheduler.Start()
-	return c.scheduler.Every(1).Day().At(at).Do(c.run, context.Background())
+	s.scheduler = gocron.NewScheduler()
+	return s.scheduler.Every(1).Day().At(at).Do(s.run, context.Background())
 }
 
-func (c *Checker) Close() error {
-	if c.scheduler != nil {
-		c.scheduler.Clear()
+func (s *Service) Close() error {
+	if s.scheduler != nil {
+		s.scheduler.Clear()
 	}
 
 	return nil
 }
 
-func (c *Checker) Check_reports(ctx context.Context, tgclient telegram.Client, cmd *telegram.Command) error {
-	if err := c.run(ctx); err != nil {
+func (s *Service) Check_reports(ctx context.Context, tgclient telegram.Client, cmd *telegram.Command) error {
+	if err := s.run(ctx); err != nil {
 		return errors.Wrap(err, "update surfaces")
 	}
 
 	return cmd.Reply(ctx, tgclient, "OK")
 }
 
-func (c *Checker) run(ctx context.Context) error {
+func (s *Service) run(ctx context.Context) error {
 	report := core.NewJobReport()
 	report.Title("Сравнение отчетов ГПМ vs GI")
-	if err := c.runWith(ctx, report); err != nil {
+	if err := s.runWith(ctx, report); err != nil {
 		if flu.IsContextRelated(err) {
 			return err
 		}
@@ -68,18 +64,18 @@ func (c *Checker) run(ctx context.Context) error {
 		report.Error("Run check", err.Error())
 	}
 
-	return report.DumpTo(ctx, c.NewOutput())
+	return report.DumpTo(ctx, s.NewOutput())
 }
 
-func (c *Checker) runWith(ctx context.Context, report *core.JobReport) error {
-	end := truncateDay(c.Clock.Now())
-	start := truncateDay(end.Add(-time.Duration(c.LastDays*24) * time.Hour))
-	clickhouse, err := c.getClickhouseData(ctx, start, end)
+func (s *Service) runWith(ctx context.Context, report *core.JobReport) error {
+	end := truncateDay(s.Clock.Now())
+	start := truncateDay(end.Add(-time.Duration(s.LastDays*24) * time.Hour))
+	clickhouse, err := s.getClickhouseData(ctx, start, end)
 	if err != nil {
 		return errors.Wrap(err, "get clickhouse data")
 	}
 
-	queryApi, err := c.getQueryApiData(ctx, start, end)
+	queryApi, err := s.getQueryApiData(ctx, start, end)
 	if err != nil {
 		return errors.Wrap(err, "get query-api data")
 	}
@@ -87,11 +83,11 @@ func (c *Checker) runWith(ctx context.Context, report *core.JobReport) error {
 	for date := start; date.Before(end); date = date.Add(24 * time.Hour) {
 		day := date.Format("2006-01-02")
 		comparison := compare(clickhouse[day], queryApi[day])
-		if comparison.breaks(c.Thresholds.Error) {
+		if comparison.breaks(s.Thresholds.Error) {
 			report.Error(day, comparison.String())
-		} else if comparison.breaks(c.Thresholds.Warn) {
+		} else if comparison.breaks(s.Thresholds.Warn) {
 			report.Warn(day, comparison.String())
-		} else if comparison.breaks(c.Thresholds.Info) {
+		} else if comparison.breaks(s.Thresholds.Info) {
 			report.Info(day, comparison.String())
 		}
 	}
@@ -99,55 +95,9 @@ func (c *Checker) runWith(ctx context.Context, report *core.JobReport) error {
 	return nil
 }
 
-type comparison map[string][3]float64
-
-func compare(a, b map[string]float64) comparison {
-	c := make(map[string][3]float64)
-	for _, field := range Values {
-		a := a[field]
-		b := b[field]
-		if a == 0 && b != 0 {
-			c[field] = [3]float64{a, b, 1}
-		} else if a != 0 {
-			c[field] = [3]float64{a, b, b/a - 1}
-		}
-	}
-
-	return c
-}
-
-func (c comparison) breaks(threshold float64) bool {
-	for _, entry := range c {
-		if math.Abs(entry[2]) > threshold {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (c comparison) String() string {
-	var b strings.Builder
-	for field, entry := range c {
-		diff := entry[2]
-		sign := ""
-		if diff > 0 {
-			sign = "+"
-		} else if diff < 0 {
-			sign = "-"
-		} else {
-			continue
-		}
-
-		b.WriteString(fmt.Sprintf("%s: %.0f / %.0f / %s%.5f%s\n", field, entry[0], entry[1], sign, math.Abs(diff), "%"))
-	}
-
-	return strings.Trim(b.String(), "\n")
-}
-
-func (c *Checker) getClickhouseData(ctx context.Context, start, end time.Time) (Data, error) {
+func (s *Service) getClickhouseData(ctx context.Context, start, end time.Time) (Data, error) {
 	rows := make([]map[string]interface{}, 0)
-	if err := c.Clickhouse.WithContext(ctx).Raw( /* language=SQL */ `
+	if err := s.Clickhouse.WithContext(ctx).Raw( /* language=SQL */ `
 		select toString(toDate(fromUnixTimestamp64Milli(bid.timestamp))) as day,
 			   toFloat64(count(1)) as bids,
 			   toFloat64(count(clearance_price)) as shows
@@ -178,8 +128,8 @@ func (c *Checker) getClickhouseData(ctx context.Context, start, end time.Time) (
 	return report, nil
 }
 
-func (c *Checker) getQueryApiData(ctx context.Context, start, end time.Time) (Data, error) {
-	response, err := c.QueryApiClient.GetReport(ctx, &QueryApiRequest{
+func (s *Service) getQueryApiData(ctx context.Context, start, end time.Time) (Data, error) {
+	response, err := s.QueryApiClient.GetReport(ctx, &QueryApiRequest{
 		DatasetName: "dooh_report_v2",
 		Start:       start,
 		End:         end,

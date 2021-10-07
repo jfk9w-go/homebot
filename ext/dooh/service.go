@@ -10,21 +10,23 @@ import (
 type Service struct {
 	ChatID   telegram.ID
 	TgClient telegram.Client
-	Buttons  *core.ControlButtons
 }
 
 func (s *Service) NewOutput() *output.Paged {
 	return &output.Paged{
 		Receiver: &receiver.Chat{
-			Sender:      s.TgClient,
-			ID:          s.ChatID,
-			ParseMode:   telegram.HTML,
-			ReplyMarkup: s.Buttons.Keyboard(s.ChatID, 0),
+			Sender:    s.TgClient,
+			ID:        s.ChatID,
+			ParseMode: telegram.HTML,
 		},
 		PageSize: telegram.MaxMessageSize,
 	}
 }
 
-func (s *Service) Allow(chatID, userID telegram.ID) bool {
-	return chatID == s.ChatID && userID != chatID
+func (s *Service) Gate() core.Gate {
+	return core.Gate{
+		ChatIDs: map[telegram.ChatID]bool{
+			s.ChatID: true,
+		},
+	}
 }

@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/jfk9w-go/flu"
 	"github.com/jfk9w-go/flu/app"
@@ -20,7 +21,6 @@ type Instance struct {
 	*app.Base
 	extensions []Extension
 	databases  map[string]*gorm.DB
-	buttons    *core.ControlButtons
 	bot        *telegram.Bot
 }
 
@@ -66,14 +66,6 @@ func (app *Instance) GetDatabase(driver, conn string) (*gorm.DB, error) {
 	return db, nil
 }
 
-func (app *Instance) GetControlButtons() *core.ControlButtons {
-	if app.buttons == nil {
-		app.buttons = core.NewControlButtons()
-	}
-
-	return app.buttons
-}
-
 func (app *Instance) GetBot(ctx context.Context) (*telegram.Bot, error) {
 	if app.bot != nil {
 		return app.bot, nil
@@ -90,39 +82,33 @@ func (app *Instance) GetBot(ctx context.Context) (*telegram.Bot, error) {
 
 func (app *Instance) Run(ctx context.Context) error {
 	registry := make(telegram.CommandRegistry)
-	buttons := core.NewControlButtons()
 	registry.AddFunc("/start", func(ctx context.Context, client telegram.Client, cmd *telegram.Command) error {
-		output := buttons.Output(client, cmd)
-		if err := output.WriteUnbreakable(ctx, fmt.Sprintf("hi, %d @ %d", cmd.User.ID, cmd.Chat.ID)); err != nil {
-			return err
-		}
-
-		return output.Flush(ctx)
+		return cmd.Reply(ctx, client, fmt.Sprintf("hi, %d @ %d", cmd.User.ID, cmd.Chat.ID))
 	})
 
+	scopeCommands := make(scopeCommands)
 	for _, extension := range app.extensions {
 		id := extension.ID()
-		listener, err := extension.Apply(ctx, app, buttons)
+		listener, err := extension.Apply(ctx, app)
 		if err != nil {
 			return errors.Wrapf(err, "apply plugin %s", id)
 		}
 
 		if listener != nil {
 			commands := telegram.CommandRegistryFrom(listener)
-			gate, ok := listener.(core.Gate)
-			if !ok {
-				gate = core.Public
-			}
-
-			for key, command := range commands {
-				if _, ok := registry[key]; ok {
-					logrus.Fatalf("duplicate command handler for %s@%s", key, id)
+			gated, ok := listener.(core.Gated)
+			if ok {
+				gate := gated.Gate()
+				for key, listener := range commands {
+					scopeCommands.addGated(gate, key)
+					registry.Add(key, gate.Wrap(listener))
 				}
-
-				registry[key] = core.ApplyGate(gate, command)
+			} else {
+				for key, listener := range registry {
+					scopeCommands.addDefault(key)
+					registry.Add(key, listener)
+				}
 			}
-
-			buttons.Add(commands, gate)
 		}
 
 		logrus.WithField("service", id).Infof("init ok")
@@ -133,6 +119,14 @@ func (app *Instance) Run(ctx context.Context) error {
 		return errors.Wrap(err, "get bot")
 	}
 
+	if err := scopeCommands.set(ctx, bot); err != nil {
+		return errors.Wrap(err, "set commands")
+	}
+
 	app.Manage(bot.CommandListener(registry))
 	return nil
+}
+
+func humanizeKey(key string) string {
+	return strings.Replace(strings.Title(strings.Trim(key, "/")), "_", " ", -1)
 }

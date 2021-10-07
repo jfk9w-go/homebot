@@ -6,7 +6,6 @@ import (
 
 	"github.com/jfk9w-go/flu"
 	"github.com/jfk9w-go/homebot/app"
-	"github.com/jfk9w-go/homebot/core"
 	telegram "github.com/jfk9w-go/telegram-bot-api"
 	"github.com/pkg/errors"
 )
@@ -23,7 +22,7 @@ func (e Extension) Buttons() []telegram.Button {
 	}
 }
 
-func (e Extension) Apply(ctx context.Context, app app.Interface, buttons *core.ControlButtons) (interface{}, error) {
+func (e Extension) Apply(ctx context.Context, app app.Interface) (interface{}, error) {
 	config := new(struct {
 		Tinkoff *struct {
 			Database string
@@ -55,14 +54,13 @@ func (e Extension) Apply(ctx context.Context, app app.Interface, buttons *core.C
 		return nil, errors.Wrap(err, "decode creds")
 	}
 
-	return &CommandListener{
+	return &Service{
 		Context: &Context{
 			Storage: storage,
 			Reload:  config.Tinkoff.Reload.GetOrDefault(60 * 24 * time.Hour),
 		},
-		ControlButtons: buttons,
-		Clock:          app,
-		Credentials:    creds,
-		Executors:      e,
+		Clock:       app,
+		Credentials: creds,
+		Executors:   e,
 	}, nil
 }

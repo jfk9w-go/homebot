@@ -6,7 +6,6 @@ import (
 
 	"github.com/jfk9w-go/flu"
 	"github.com/jfk9w-go/homebot/app"
-	"github.com/jfk9w-go/homebot/core"
 	telegram "github.com/jfk9w-go/telegram-bot-api"
 	"github.com/pkg/errors"
 )
@@ -19,7 +18,7 @@ func (extension) ID() string {
 	return "hassgpx"
 }
 
-func (extension) Apply(_ context.Context, app app.Interface, buttons *core.ControlButtons) (interface{}, error) {
+func (extension) Apply(_ context.Context, app app.Interface) (interface{}, error) {
 	globalConfig := new(struct {
 		HassGPX *struct {
 			Database     string
@@ -50,13 +49,12 @@ func (extension) Apply(_ context.Context, app app.Interface, buttons *core.Contr
 	}
 
 	storage := (*SQLStorage)(db)
-	return &CommandListener{
-		Clock:          app,
-		Storage:        storage,
-		ControlButtons: buttons,
-		UserIDs:        config.Users,
-		MaxSpeed:       maxSpeed,
-		LastDays:       config.LastDays,
-		MoveInterval:   config.MoveInterval.GetOrDefault(time.Minute),
+	return &Service{
+		Clock:        app,
+		Storage:      storage,
+		UserIDs:      config.Users,
+		MaxSpeed:     maxSpeed,
+		LastDays:     config.LastDays,
+		MoveInterval: config.MoveInterval.GetOrDefault(time.Minute),
 	}, nil
 }

@@ -12,26 +12,29 @@ import (
 	"github.com/pkg/errors"
 )
 
-type CommandListener struct {
+type Service struct {
 	flu.Clock
 	Storage
-	*core.ControlButtons
 	UserIDs      map[telegram.ID]string
 	LastDays     int
 	MaxSpeed     float64
 	MoveInterval time.Duration
 }
 
-func (l *CommandListener) Allow(chatID, userID telegram.ID) bool {
-	_, ok := l.UserIDs[userID]
-	return ok && chatID == userID
+func (s *Service) Gate() core.Gate {
+	userIDs := make(map[telegram.ID]bool, len(s.UserIDs))
+	for userID := range s.UserIDs {
+		userIDs[userID] = true
+	}
+
+	return core.Gate{UserIDs: userIDs}
 }
 
-func (l *CommandListener) Get_GPX_track(ctx context.Context, client telegram.Client, cmd *telegram.Command) error {
-	entityID := l.UserIDs[cmd.User.ID]
-	since := l.Now().Add(-time.Duration(l.LastDays) * 24 * time.Hour)
+func (s *Service) Get_GPX_track(ctx context.Context, client telegram.Client, cmd *telegram.Command) error {
+	entityID := s.UserIDs[cmd.User.ID]
+	since := s.Now().Add(-time.Duration(s.LastDays) * 24 * time.Hour)
 	since = time.Date(since.Year(), since.Month(), since.Day(), 0, 0, 0, 0, time.UTC)
-	waypoints, err := l.GetLastTrack(ctx, entityID, since, l.MaxSpeed, l.MoveInterval)
+	waypoints, err := s.GetLastTrack(ctx, entityID, since, s.MaxSpeed, s.MoveInterval)
 	if err != nil {
 		return errors.Wrap(err, "get last track")
 	}
@@ -68,8 +71,7 @@ func (l *CommandListener) Get_GPX_track(ctx context.Context, client telegram.Cli
 			Type:     telegram.Document,
 			Input:    buffer,
 			Filename: filename},
-		&telegram.SendOptions{
-			ReplyMarkup: l.Keyboard(cmd.Chat.ID, cmd.User.ID)})
+		nil)
 	if err != nil {
 		return errors.Wrap(err, "send gpx track")
 	}
