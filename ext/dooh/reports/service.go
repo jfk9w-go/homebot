@@ -47,10 +47,10 @@ func (s *Service) Close() error {
 
 func (s *Service) Check_reports(ctx context.Context, tgclient telegram.Client, cmd *telegram.Command) error {
 	if err := s.run(ctx); err != nil {
-		return errors.Wrap(err, "update surfaces")
+		return errors.Wrap(err, "check reports")
 	}
 
-	return cmd.Reply(ctx, tgclient, "OK")
+	return nil
 }
 
 func (s *Service) run(ctx context.Context) error {

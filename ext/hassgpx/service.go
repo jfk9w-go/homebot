@@ -76,5 +76,5 @@ func (s *Service) Get_GPX_track(ctx context.Context, client telegram.Client, cmd
 		return errors.Wrap(err, "send gpx track")
 	}
 
-	return cmd.Reply(ctx, client, "OK")
+	return nil
 }

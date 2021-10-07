@@ -77,5 +77,5 @@ func (s *Service) Update_bank_statement(ctx context.Context, tgclient telegram.C
 		return err
 	}
 
-	return cmd.Reply(ctx, tgclient, "OK")
+	return nil
 }
