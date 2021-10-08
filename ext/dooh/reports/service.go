@@ -39,7 +39,7 @@ func (s *Service) RunInBackground(ctx context.Context, spec string) error {
 	if _, err := s.cron.AddFunc(spec, func() {
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
-		if err := s.run(ctx); err != nil {
+		if err := s.run(ctx, s.LastDays); err != nil {
 			logrus.Warnf("check reports: %s", err)
 		}
 	}); err != nil {
@@ -64,17 +64,26 @@ func (s *Service) Close() error {
 }
 
 func (s *Service) Check_reports(ctx context.Context, tgclient telegram.Client, cmd *telegram.Command) error {
-	if err := s.run(ctx); err != nil {
+	lastDays := s.LastDays
+	if len(cmd.Args) > 0 {
+		var err error
+		lastDays, err = strconv.Atoi(cmd.Args[0])
+		if err != nil || lastDays < 1 {
+			return errors.Errorf("invalid last days: %s", cmd.Args[0])
+		}
+	}
+
+	if err := s.run(ctx, lastDays); err != nil {
 		return errors.Wrap(err, "check reports")
 	}
 
 	return nil
 }
 
-func (s *Service) run(ctx context.Context) error {
+func (s *Service) run(ctx context.Context, lastDays int) error {
 	report := core.NewJobReport()
-	report.Title(fmt.Sprintf("Сравнение отчетов ГПМ vs GI (%d дней)", s.LastDays))
-	if err := s.runWith(ctx, report); err != nil {
+	report.Title(fmt.Sprintf("Сравнение отчетов ГПМ vs GI (%d дней)", lastDays))
+	if err := s.runWith(ctx, lastDays, report); err != nil {
 		if flu.IsContextRelated(err) {
 			return err
 		}
@@ -85,9 +94,9 @@ func (s *Service) run(ctx context.Context) error {
 	return report.DumpTo(ctx, s.NewOutput())
 }
 
-func (s *Service) runWith(ctx context.Context, report *core.JobReport) error {
+func (s *Service) runWith(ctx context.Context, lastDays int, report *core.JobReport) error {
 	end := truncateDay(s.Clock.Now())
-	start := truncateDay(end.Add(-time.Duration(s.LastDays*24) * time.Hour))
+	start := truncateDay(end.Add(-time.Duration(lastDays*24) * time.Hour))
 	clickhouse, err := s.getClickhouseData(ctx, start, end)
 	if err != nil {
 		return errors.Wrap(err, "get clickhouse data")
