@@ -49,5 +49,10 @@ func (c comparison) String() string {
 		b.WriteString(fmt.Sprintf("%s: %.0f / %.0f / %s%.3f%s\n", field, entry[0], entry[1], sign, 100*math.Abs(diff), "%"))
 	}
 
-	return strings.Trim(b.String(), "\n")
+	result := strings.Trim(b.String(), " \n")
+	if result == "" {
+		return "OK"
+	}
+
+	return result
 }
