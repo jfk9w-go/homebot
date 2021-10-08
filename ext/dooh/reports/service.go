@@ -98,16 +98,24 @@ func (s *Service) runWith(ctx context.Context, report *core.JobReport) error {
 		return errors.Wrap(err, "get query-api data")
 	}
 
+	invalidDays := 0
 	for date := start; date.Before(end); date = date.Add(24 * time.Hour) {
 		day := date.Format("2006-01-02")
 		comparison := compare(clickhouse[day], queryApi[day])
 		if comparison.breaks(s.Thresholds.Error) {
 			report.Error(day, comparison.String())
+			invalidDays++
 		} else if comparison.breaks(s.Thresholds.Warn) {
 			report.Warn(day, comparison.String())
+			invalidDays++
 		} else if comparison.breaks(s.Thresholds.Info) {
 			report.Info(day, comparison.String())
+			invalidDays++
 		}
+	}
+
+	if invalidDays == 0 {
+		report.Title("OK")
 	}
 
 	logrus.Infof("check reports: ok")
