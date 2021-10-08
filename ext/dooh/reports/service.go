@@ -6,12 +6,13 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-co-op/gocron"
 	"github.com/jfk9w-go/flu"
 	"github.com/jfk9w-go/homebot/core"
 	"github.com/jfk9w-go/homebot/ext/dooh"
 	"github.com/jfk9w-go/telegram-bot-api"
 	"github.com/pkg/errors"
+	"github.com/robfig/cron/v3"
+	"github.com/sirupsen/logrus"
 	"gorm.io/gorm"
 )
 
@@ -26,27 +27,37 @@ type Service struct {
 	Clickhouse     *gorm.DB
 	LastDays       int
 	Thresholds     Thresholds
-	scheduler      *gocron.Scheduler
+	cron           *cron.Cron
 }
 
-func (s *Service) RunInBackground(ctx context.Context, at string) error {
-	if s.scheduler != nil {
+func (s *Service) RunInBackground(ctx context.Context, spec string) error {
+	if s.cron != nil {
 		return nil
 	}
 
-	s.scheduler = gocron.NewScheduler(time.UTC)
-	if job, err := s.scheduler.Every(1).Day().At(at).Do(s.run, context.Background()); err != nil {
-		job.SingletonMode()
-		return err
+	s.cron = cron.New()
+	if _, err := s.cron.AddFunc(spec, func() {
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+		if err := s.run(ctx); err != nil {
+			logrus.Warnf("check reports: %s", err)
+		}
+	}); err != nil {
+		return errors.Wrap(err, "failed to schedule cron task")
 	}
 
+	s.cron.Start()
 	return nil
 }
 
 func (s *Service) Close() error {
-	if s.scheduler != nil {
-		s.scheduler.Clear()
-		s.scheduler.Stop()
+	if s.cron != nil {
+		select {
+		case <-time.After(10 * time.Second):
+			return errors.New("timeout on exit")
+		case <-s.cron.Stop().Done():
+			return nil
+		}
 	}
 
 	return nil
@@ -99,6 +110,7 @@ func (s *Service) runWith(ctx context.Context, report *core.JobReport) error {
 		}
 	}
 
+	logrus.Infof("check reports: ok")
 	return nil
 }
 

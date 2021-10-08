@@ -23,7 +23,7 @@ func (extension) Apply(ctx context.Context, app app.Interface) (interface{}, err
 			Reports *struct {
 				Token      string
 				Clickhouse string
-				At         string
+				Cron       string
 				LastDays   int
 				Thresholds Thresholds
 			}
@@ -68,7 +68,7 @@ func (extension) Apply(ctx context.Context, app app.Interface) (interface{}, err
 		Thresholds:     config.Thresholds,
 	}
 
-	if err := checker.RunInBackground(ctx, config.At); err != nil {
+	if err := checker.RunInBackground(ctx, config.Cron); err != nil {
 		return nil, errors.Wrap(err, "run in background")
 	}
 
