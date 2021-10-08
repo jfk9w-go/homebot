@@ -3,7 +3,7 @@ module github.com/jfk9w-go/homebot
 go 1.17
 
 require (
-	github.com/jasonlvhit/gocron v0.0.1
+	github.com/go-co-op/gocron v1.9.0
 	github.com/jfk9w-go/flu v0.9.29
 	github.com/jfk9w-go/telegram-bot-api v0.9.27
 	github.com/pkg/errors v0.9.1
@@ -26,7 +26,6 @@ require (
 	github.com/containerd/continuity v0.1.0 // indirect
 	github.com/docker/go-connections v0.4.0 // indirect
 	github.com/docker/go-units v0.4.0 // indirect
-	github.com/go-co-op/gocron v1.9.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/hashicorp/go-version v1.3.0 // indirect
