@@ -5,10 +5,11 @@ import (
 	"strings"
 	"time"
 
+	"homebot/tinkoff/external"
+
 	"github.com/jfk9w-go/flu"
-	"github.com/jfk9w-go/homebot/core"
-	"github.com/jfk9w-go/homebot/ext/tinkoff/external"
 	telegram "github.com/jfk9w-go/telegram-bot-api"
+	"github.com/jfk9w-go/telegram-bot-api/ext/app"
 	"github.com/jfk9w-go/telegram-bot-api/ext/output"
 	"github.com/jfk9w-go/telegram-bot-api/ext/receiver"
 )
@@ -25,13 +26,13 @@ type Service struct {
 	Executors   []Executor
 }
 
-func (s *Service) Gate() core.Gate {
+func (s *Service) CommandScope() app.CommandScope {
 	userIDs := make(map[telegram.ID]bool, len(s.Credentials))
 	for userID := range s.Credentials {
 		userIDs[userID] = true
 	}
 
-	return core.Gate{UserIDs: userIDs}
+	return app.CommandScope{UserIDs: userIDs}
 }
 
 func (s *Service) Update_bank_statement(ctx context.Context, tgclient telegram.Client, cmd *telegram.Command) error {
@@ -51,7 +52,17 @@ func (s *Service) Update_bank_statement(ctx context.Context, tgclient telegram.C
 		return err
 	}
 
-	report := core.NewJobReport()
+	report := &output.Leveled{
+		Context: ctx,
+		Paged: &output.Paged{
+			Receiver: &receiver.Chat{
+				Sender: tgclient,
+				ID:     cmd.Chat.ID,
+			},
+			PageSize: telegram.MaxMessageSize,
+		},
+	}
+
 	sync := &Sync{
 		Context: s.Context,
 		Client:  client,
@@ -65,17 +76,5 @@ func (s *Service) Update_bank_statement(ctx context.Context, tgclient telegram.C
 		}
 	}
 
-	output := &output.Paged{
-		Receiver: &receiver.Chat{
-			Sender: tgclient,
-			ID:     cmd.Chat.ID,
-		},
-		PageSize: telegram.MaxMessageSize,
-	}
-
-	if err := report.DumpTo(ctx, output); err != nil {
-		return err
-	}
-
-	return nil
+	return report.Close()
 }

@@ -1,45 +1,19 @@
 package main
 
 import (
-	"context"
-	"os"
+	"homebot/hassgpx"
+	"homebot/tinkoff"
+	"homebot/tinkoff/sync"
 
-	"github.com/jfk9w-go/flu"
-	"github.com/jfk9w-go/homebot/app"
-	"github.com/jfk9w-go/homebot/ext/dooh/reports"
-	"github.com/jfk9w-go/homebot/ext/dooh/surfaces"
-	"github.com/jfk9w-go/homebot/ext/hassgpx"
-	"github.com/jfk9w-go/homebot/ext/tinkoff"
-	"github.com/jfk9w-go/homebot/ext/tinkoff/sync"
-	"github.com/sirupsen/logrus"
+	"github.com/jfk9w-go/telegram-bot-api/ext/app"
+	"gorm.io/driver/postgres"
 )
 
 var GitCommit = "dev"
 
 func main() {
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	app, err := app.Create(GitCommit, flu.DefaultClock, flu.File(os.Args[1]))
-	if err != nil {
-		logrus.Fatal(err)
-	}
-
-	defer flu.CloseQuietly(app)
-	if err := app.ConfigureLogging(); err != nil {
-		logrus.Fatal(err)
-	}
-
-	app.ApplyExtensions(
-		hassgpx.Extension,
+	app.GormDialects["postgres"] = postgres.Open
+	app.Run(GitCommit,
 		tinkoff.Extension{sync.Accounts, sync.TradingOperations, sync.PurchasedSecurities},
-		surfaces.Extension,
-		reports.Extension,
-	)
-
-	if err := app.Run(ctx); err != nil {
-		logrus.Fatal(err)
-	}
-
-	flu.AwaitSignal()
+		hassgpx.Extension)
 }

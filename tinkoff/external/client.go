@@ -9,10 +9,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/pkg/errors"
-
 	"github.com/jfk9w-go/flu"
 	fluhttp "github.com/jfk9w-go/flu/http"
+	"github.com/pkg/errors"
 )
 
 type Confirm func(ctx context.Context) (code string, err error)

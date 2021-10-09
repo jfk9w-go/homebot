@@ -4,10 +4,11 @@ import (
 	"context"
 	"time"
 
+	"homebot/tinkoff/external"
+
 	"github.com/jfk9w-go/flu"
-	"github.com/jfk9w-go/homebot/core"
-	"github.com/jfk9w-go/homebot/ext/tinkoff/external"
 	telegram "github.com/jfk9w-go/telegram-bot-api"
+	"github.com/jfk9w-go/telegram-bot-api/ext/output"
 )
 
 type Credential struct {
@@ -31,7 +32,7 @@ type Sync struct {
 	*Context
 	*external.Client
 	Now    time.Time
-	report *core.JobReport
+	report *output.Leveled
 }
 
 func (s *Sync) Run(ctx context.Context, executor Executor) error {
@@ -41,10 +42,10 @@ func (s *Sync) Run(ctx context.Context, executor Executor) error {
 		if flu.IsContextRelated(err) {
 			return err
 		} else {
-			s.report.Error(name, err.Error())
+			s.report.Errorf(name, err.Error())
 		}
 	} else {
-		s.report.Info(name, "%d items synced", count)
+		s.report.Infof("%s\n%d items synced", name, count)
 	}
 
 	return nil

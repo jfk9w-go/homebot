@@ -1,8 +1,9 @@
 package main
 
 import (
+	"homebot/tinkoff"
+
 	"github.com/jfk9w-go/flu"
-	"github.com/jfk9w-go/homebot/ext/tinkoff"
 )
 
 // Use this helper in order to encode your Tinkoff bank credentials with Gob.

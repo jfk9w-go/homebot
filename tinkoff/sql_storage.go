@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/pkg/errors"
-	"gorm.io/gorm"
+	"homebot/tinkoff/external"
 
 	gormutil "github.com/jfk9w-go/flu/gorm"
-
-	"github.com/jfk9w-go/homebot/ext/tinkoff/external"
+	"github.com/pkg/errors"
+	"gorm.io/gorm"
 )
 
 type SQLStorage gorm.DB

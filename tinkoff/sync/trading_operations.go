@@ -3,10 +3,10 @@ package sync
 import (
 	"context"
 
-	"github.com/pkg/errors"
+	"homebot/tinkoff"
+	"homebot/tinkoff/external"
 
-	"github.com/jfk9w-go/homebot/ext/tinkoff"
-	"github.com/jfk9w-go/homebot/ext/tinkoff/external"
+	"github.com/pkg/errors"
 )
 
 var TradingOperations tinkoff.Executor = tradingOperations{}

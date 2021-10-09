@@ -3,9 +3,9 @@ package sync
 import (
 	"context"
 
-	"github.com/pkg/errors"
+	"homebot/tinkoff"
 
-	"github.com/jfk9w-go/homebot/ext/tinkoff"
+	"github.com/pkg/errors"
 )
 
 var PurchasedSecurities tinkoff.Executor = purchasedSecurities{}
