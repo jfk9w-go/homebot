@@ -8,7 +8,7 @@ import (
 
 	"github.com/jfk9w-go/flu"
 	telegram "github.com/jfk9w-go/telegram-bot-api"
-	"github.com/jfk9w-go/telegram-bot-api/ext/output"
+	"github.com/jfk9w-go/telegram-bot-api/ext/html"
 )
 
 type Credential struct {
@@ -32,21 +32,25 @@ type Sync struct {
 	*Context
 	*external.Client
 	Now    time.Time
-	report *output.Leveled
+	report *html.Writer
 }
 
 func (s *Sync) Run(ctx context.Context, executor Executor) error {
-	name := executor.Name()
 	count, err := executor.Run(ctx, s)
+	s.report.Bold("%s • ", executor.Name())
 	if err != nil {
 		if flu.IsContextRelated(err) {
 			return err
 		} else {
-			s.report.Errorf(name, err.Error())
+			s.report.Text(err.Error())
 		}
 	} else {
-		s.report.Infof("%s\n%d items synced", name, count)
+		s.report.Text("%d items synced", count)
 	}
 
 	return nil
+}
+
+func (s *Sync) Close() error {
+	return s.report.Flush()
 }

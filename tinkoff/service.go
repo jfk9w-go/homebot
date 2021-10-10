@@ -9,9 +9,8 @@ import (
 
 	"github.com/jfk9w-go/flu"
 	telegram "github.com/jfk9w-go/telegram-bot-api"
+	"github.com/jfk9w-go/telegram-bot-api/ext"
 	"github.com/jfk9w-go/telegram-bot-api/ext/app"
-	"github.com/jfk9w-go/telegram-bot-api/ext/output"
-	"github.com/jfk9w-go/telegram-bot-api/ext/receiver"
 )
 
 type Context struct {
@@ -52,22 +51,11 @@ func (s *Service) Update_bank_statement(ctx context.Context, tgclient telegram.C
 		return err
 	}
 
-	report := &output.Leveled{
-		Context: ctx,
-		Paged: &output.Paged{
-			Receiver: &receiver.Chat{
-				Sender: tgclient,
-				ID:     cmd.Chat.ID,
-			},
-			PageSize: telegram.MaxMessageSize,
-		},
-	}
-
 	sync := &Sync{
 		Context: s.Context,
 		Client:  client,
 		Now:     s.Now(),
-		report:  report,
+		report:  ext.HTML(ctx, tgclient, cmd.Chat.ID),
 	}
 
 	for _, executor := range s.Executors {
@@ -76,5 +64,5 @@ func (s *Service) Update_bank_statement(ctx context.Context, tgclient telegram.C
 		}
 	}
 
-	return report.Close()
+	return sync.Close()
 }
