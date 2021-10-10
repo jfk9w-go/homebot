@@ -37,7 +37,7 @@ type Sync struct {
 
 func (s *Sync) Run(ctx context.Context, executor Executor) error {
 	count, err := executor.Run(ctx, s)
-	s.report.Bold("%s • ", executor.Name())
+	s.report.Bold("\n%s • ", executor.Name())
 	if err != nil {
 		if flu.IsContextRelated(err) {
 			return err

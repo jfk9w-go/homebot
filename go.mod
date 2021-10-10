@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/jfk9w-go/flu v0.9.30
-	github.com/jfk9w-go/telegram-bot-api v0.9.32
+	github.com/jfk9w-go/telegram-bot-api v0.9.33
 	github.com/pkg/errors v0.9.1
 	gopkg.in/guregu/null.v3 v3.5.0
 	gorm.io/driver/postgres v1.1.2
