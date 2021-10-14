@@ -1,6 +1,6 @@
 # homebot
 
-[![ci](https://github.com/jfk9w-go/homebot/actions/workflows/ci.yml/badge.svg)](https://github.com/jfk9w-go/homebot/actions/workflows/ci.yml)
+[![test](https://github.com/jfk9w-go/homebot/actions/workflows/test.yml/badge.svg)](https://github.com/jfk9w-go/homebot/actions/workflows/test.yml)
 
 A collection of everyday utilities with Telegram bot as frontend.
 
