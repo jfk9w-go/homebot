@@ -1,6 +1,3 @@
-.idea/
-*.iml
-config.local.yml
-*.bin
-console.sql
+.vscode/launch.json
 __debug_bin
+console.sql

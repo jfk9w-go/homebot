@@ -20,7 +20,8 @@ func (extension) ID() string {
 
 func (extension) Apply(_ context.Context, app app.Interface) (interface{}, error) {
 	globalConfig := new(struct {
-		HassGPX *struct {
+		HassGPX struct {
+			Enabled      bool
 			Database     string
 			MaxSpeed     *float64
 			LastDays     int
@@ -29,12 +30,12 @@ func (extension) Apply(_ context.Context, app app.Interface) (interface{}, error
 		}
 	})
 
-	if err := app.GetConfig(globalConfig); err != nil {
+	if err := app.GetConfig().As(globalConfig); err != nil {
 		return nil, errors.Wrap(err, "get config")
 	}
 
 	config := globalConfig.HassGPX
-	if config == nil {
+	if !config.Enabled {
 		return nil, nil
 	}
 

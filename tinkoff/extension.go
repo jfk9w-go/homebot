@@ -23,23 +23,25 @@ func (e Extension) Buttons() []telegram.Button {
 }
 
 func (e Extension) Apply(ctx context.Context, app app.Interface) (interface{}, error) {
-	config := new(struct {
-		Tinkoff *struct {
+	globalConfig := new(struct {
+		Tinkoff struct {
+			Enabled  bool
 			Database string
-			Data     string
+			Data     flu.File
 			Reload   flu.Duration
 		}
 	})
 
-	if err := app.GetConfig(config); err != nil {
+	if err := app.GetConfig().As(globalConfig); err != nil {
 		return nil, errors.Wrap(err, "get config")
 	}
 
-	if config.Tinkoff == nil {
+	config := globalConfig.Tinkoff
+	if !config.Enabled {
 		return nil, nil
 	}
 
-	db, err := app.GetDatabase("postgres", config.Tinkoff.Database)
+	db, err := app.GetDatabase("postgres", config.Database)
 	if err != nil {
 		return nil, errors.Wrap(err, "get database")
 	}
@@ -49,15 +51,15 @@ func (e Extension) Apply(ctx context.Context, app app.Interface) (interface{}, e
 		return nil, errors.Wrap(err, "init storage")
 	}
 
-	creds := make(CredentialStore)
-	if err := flu.DecodeFrom(flu.File(config.Tinkoff.Data), flu.Gob(&creds)); err != nil {
+	creds, err := DecodeCredentialsFrom(config.Data)
+	if err != nil {
 		return nil, errors.Wrap(err, "decode creds")
 	}
 
 	return &Service{
 		Context: &Context{
 			Storage: storage,
-			Reload:  config.Tinkoff.Reload.GetOrDefault(60 * 24 * time.Hour),
+			Reload:  config.Reload.GetOrDefault(60 * 24 * time.Hour),
 		},
 		Clock:       app,
 		Credentials: creds,

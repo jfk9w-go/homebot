@@ -15,7 +15,18 @@ type Credential struct {
 	Username, Password string
 }
 
+var CredentialsCodec = flu.Gob
+
 type CredentialStore map[telegram.ID]Credential
+
+func (creds CredentialStore) EncodeTo(output flu.Output) error {
+	return flu.EncodeTo(CredentialsCodec(creds), output)
+}
+
+func DecodeCredentialsFrom(input flu.Input) (CredentialStore, error) {
+	creds := make(CredentialStore)
+	return creds, flu.DecodeFrom(input, CredentialsCodec(&creds))
+}
 
 type Storage interface {
 	UpdateAccounts(ctx context.Context, batch []external.Account) error
