@@ -21,15 +21,14 @@ func main() {
 	defer cancel()
 
 	fluapp.GormDialects["postgres"] = postgres.Open
-	app := tgapp.Create(GitCommit, flu.DefaultClock)
+	app := Instance{tgapp.Create(GitCommit, flu.DefaultClock)}
 	defer flu.CloseQuietly(app)
 	app.ApplyExtensions(
 		tinkoff.Extension{sync.Accounts, sync.TradingOperations, sync.PurchasedSecurities},
 		hassgpx.Extension,
 	)
 
-	fluapp.Run(ctx, Instance{app}, fluapp.DefaultConfigurer("homebot"))
-	flu.AwaitSignal()
+	fluapp.Run(ctx, app, fluapp.DefaultConfigurer("homebot"))
 }
 
 type Instance struct {
