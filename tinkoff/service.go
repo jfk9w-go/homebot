@@ -10,7 +10,7 @@ import (
 	"github.com/jfk9w-go/flu"
 	telegram "github.com/jfk9w-go/telegram-bot-api"
 	"github.com/jfk9w-go/telegram-bot-api/ext"
-	"github.com/jfk9w-go/telegram-bot-api/ext/app"
+	"github.com/jfk9w-go/telegram-bot-api/ext/tapp"
 )
 
 type Context struct {
@@ -25,13 +25,13 @@ type Service struct {
 	Executors   []Executor
 }
 
-func (s *Service) CommandScope() app.CommandScope {
+func (s *Service) CommandScope() tapp.CommandScope {
 	userIDs := make(map[telegram.ID]bool, len(s.Credentials))
 	for userID := range s.Credentials {
 		userIDs[userID] = true
 	}
 
-	return app.CommandScope{UserIDs: userIDs}
+	return tapp.CommandScope{UserIDs: userIDs}
 }
 
 func (s *Service) Update_bank_statement(ctx context.Context, tgclient telegram.Client, cmd *telegram.Command) error {

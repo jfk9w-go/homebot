@@ -8,7 +8,7 @@ import (
 
 	"github.com/jfk9w-go/flu"
 	telegram "github.com/jfk9w-go/telegram-bot-api"
-	"github.com/jfk9w-go/telegram-bot-api/ext/app"
+	"github.com/jfk9w-go/telegram-bot-api/ext/tapp"
 	"github.com/pkg/errors"
 )
 
@@ -21,13 +21,13 @@ type Service struct {
 	MoveInterval time.Duration
 }
 
-func (s *Service) CommandScope() app.CommandScope {
+func (s *Service) CommandScope() tapp.CommandScope {
 	userIDs := make(map[telegram.ID]bool, len(s.UserIDs))
 	for userID := range s.UserIDs {
 		userIDs[userID] = true
 	}
 
-	return app.CommandScope{UserIDs: userIDs}
+	return tapp.CommandScope{UserIDs: userIDs}
 }
 
 func (s *Service) Get_GPX_track(ctx context.Context, client telegram.Client, cmd *telegram.Command) error {

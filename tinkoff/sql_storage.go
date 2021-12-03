@@ -7,7 +7,7 @@ import (
 
 	"homebot/tinkoff/external"
 
-	gormutil "github.com/jfk9w-go/flu/gorm"
+	"github.com/jfk9w-go/flu/gormf"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
@@ -35,13 +35,13 @@ func (s *SQLStorage) Init(ctx context.Context) error {
 
 func (s *SQLStorage) UpdateAccounts(ctx context.Context, accounts []external.Account) error {
 	return s.Unmask().WithContext(ctx).
-		Clauses(gormutil.OnConflictClause(accounts, "primaryKey", true, nil)).
+		Clauses(gormf.OnConflictClause(accounts, "primaryKey", true, nil)).
 		Create(accounts).
 		Error
 }
 
 func (s *SQLStorage) GetLatestTime(ctx context.Context, entity interface{}, tenant interface{}) (time.Time, error) {
-	timeColumns := gormutil.CollectTaggedColumns(entity, "time")
+	timeColumns := gormf.CollectTaggedColumns(entity, "time")
 	if len(timeColumns) == 0 {
 		return time.Time{}, errors.Errorf("no primary keys in %T", entity)
 	}
@@ -79,7 +79,7 @@ func (s *SQLStorage) Insert(ctx context.Context, batch interface{}) error {
 }
 
 func addTenantFilter(tx *gorm.DB, entity interface{}, values ...interface{}) (*gorm.DB, error) {
-	columns := gormutil.CollectTaggedColumns(entity, "tenant")
+	columns := gormf.CollectTaggedColumns(entity, "tenant")
 	if len(columns) != len(values) {
 		return nil, errors.Errorf("tenant values [%v] size is not equal to tenant columns [%v] size", values, columns)
 	}

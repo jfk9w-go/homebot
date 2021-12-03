@@ -6,7 +6,7 @@ import (
 
 	"github.com/jfk9w-go/flu"
 	telegram "github.com/jfk9w-go/telegram-bot-api"
-	"github.com/jfk9w-go/telegram-bot-api/ext/app"
+	"github.com/jfk9w-go/telegram-bot-api/ext/tapp"
 	"github.com/pkg/errors"
 )
 
@@ -22,7 +22,7 @@ func (e Extension) Buttons() []telegram.Button {
 	}
 }
 
-func (e Extension) Apply(ctx context.Context, app app.Interface) (interface{}, error) {
+func (e Extension) Apply(ctx context.Context, app tapp.Application) (interface{}, error) {
 	globalConfig := new(struct {
 		Tinkoff struct {
 			Enabled  bool

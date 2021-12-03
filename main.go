@@ -8,8 +8,8 @@ import (
 	"homebot/tinkoff/sync"
 
 	"github.com/jfk9w-go/flu"
-	fluapp "github.com/jfk9w-go/flu/app"
-	tgapp "github.com/jfk9w-go/telegram-bot-api/ext/app"
+	"github.com/jfk9w-go/flu/apfel"
+	"github.com/jfk9w-go/telegram-bot-api/ext/tapp"
 	"github.com/pkg/errors"
 	"gorm.io/driver/postgres"
 )
@@ -19,24 +19,23 @@ var GitCommit = "dev"
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-
-	fluapp.GormDialects["postgres"] = postgres.Open
-	app := Instance{tgapp.Create(GitCommit, flu.DefaultClock)}
+	apfel.GormDialects["postgres"] = postgres.Open
+	app := Instance{tapp.Create(GitCommit, flu.DefaultClock)}
 	defer flu.CloseQuietly(app)
 	app.ApplyExtensions(
 		tinkoff.Extension{sync.Accounts, sync.TradingOperations, sync.PurchasedSecurities},
 		hassgpx.Extension,
 	)
 
-	fluapp.Run(ctx, app, fluapp.DefaultConfigurer("homebot"))
+	apfel.Run(ctx, app, apfel.DefaultConfigurer("homebot"))
 }
 
 type Instance struct {
-	*tgapp.Instance
+	*tapp.Instance
 }
 
-func (app Instance) Show() (bool, error) {
-	if done, err := app.Instance.Show(); err != nil || done {
+func (app Instance) Aux() (bool, error) {
+	if done, err := app.Instance.Aux(); err != nil || done {
 		return done, err
 	}
 

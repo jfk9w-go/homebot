@@ -4,11 +4,11 @@ import (
 	"fmt"
 
 	"github.com/jfk9w-go/flu"
-	"github.com/jfk9w-go/telegram-bot-api/ext/app"
+	"github.com/jfk9w-go/telegram-bot-api/ext/tapp"
 	"github.com/pkg/errors"
 )
 
-func Run(app app.Interface) (bool, error) {
+func Run(app tapp.Application) (bool, error) {
 	globalConfig := new(struct {
 		Tinkoff struct {
 			Show, Generate bool

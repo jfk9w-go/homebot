@@ -10,20 +10,20 @@ import (
 	"time"
 
 	"github.com/jfk9w-go/flu"
-	fluhttp "github.com/jfk9w-go/flu/http"
+	"github.com/jfk9w-go/flu/httpf"
 	"github.com/pkg/errors"
 )
 
 type Confirm func(ctx context.Context) (code string, err error)
 
 type Client struct {
-	httpClient *fluhttp.Client
+	httpClient *httpf.Client
 	username   string
 	sessionID  string
 }
 
 func NewClient(ctx context.Context, username string) (*Client, error) {
-	httpClient := fluhttp.NewClient(nil).AcceptStatus(http.StatusOK)
+	httpClient := httpf.NewClient(nil).AcceptStatus(http.StatusOK)
 	var r Response
 	if err := httpClient.GET(SessionEndpoint).
 		QueryParam("origin", origin).
@@ -82,7 +82,7 @@ func (c *Client) SignUp(ctx context.Context, password string) (string, error) {
 	if err := c.httpClient.POST(SignUpEndpoint).
 		QueryParam("origin", origin).
 		QueryParam("sessionid", c.sessionID).
-		BodyEncoder(new(fluhttp.Form).
+		BodyEncoder(new(httpf.Form).
 			Add("username", c.username).
 			Add("password", password)).
 		Context(ctx).
@@ -104,7 +104,7 @@ func (c *Client) Confirm(ctx context.Context, initialOperationTicket, initialOpe
 	if err := c.httpClient.POST(ConfirmEndpoint).
 		QueryParam("origin", origin).
 		QueryParam("sessionid", c.sessionID).
-		BodyEncoder(new(fluhttp.Form).
+		BodyEncoder(new(httpf.Form).
 			Add("initialOperationTicket", initialOperationTicket).
 			Add("initialOperation", initialOperation).
 			Add("confirmationData", fmt.Sprintf(`{"SMSBYID":"%s"}`, code))).
@@ -132,7 +132,7 @@ func (c *Client) Accounts(ctx context.Context) ([]Account, error) {
 	if err := c.httpClient.POST(GroupedRequestsEndpount).
 		QueryParam("_methods", "accounts_flat").
 		QueryParam("sessionid", c.sessionID).
-		BodyEncoder(new(fluhttp.Form).
+		BodyEncoder(new(httpf.Form).
 			Add("requestsData", `[{"key":0,"operation":"accounts_flat"}]`)).
 		Context(ctx).
 		Execute().

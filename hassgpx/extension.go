@@ -6,11 +6,11 @@ import (
 
 	"github.com/jfk9w-go/flu"
 	telegram "github.com/jfk9w-go/telegram-bot-api"
-	"github.com/jfk9w-go/telegram-bot-api/ext/app"
+	"github.com/jfk9w-go/telegram-bot-api/ext/tapp"
 	"github.com/pkg/errors"
 )
 
-var Extension app.Extension = extension{}
+var Extension tapp.Extension = extension{}
 
 type extension struct{}
 
@@ -18,7 +18,7 @@ func (extension) ID() string {
 	return "hassgpx"
 }
 
-func (extension) Apply(_ context.Context, app app.Interface) (interface{}, error) {
+func (extension) Apply(_ context.Context, app tapp.Application) (interface{}, error) {
 	globalConfig := new(struct {
 		HassGPX struct {
 			Enabled      bool
