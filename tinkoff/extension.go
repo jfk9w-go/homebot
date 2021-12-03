@@ -2,7 +2,6 @@ package tinkoff
 
 import (
 	"context"
-	"time"
 
 	"github.com/jfk9w-go/flu"
 	telegram "github.com/jfk9w-go/telegram-bot-api"
@@ -59,7 +58,6 @@ func (e Extension) Apply(ctx context.Context, app tapp.Application) (interface{}
 	return &Service{
 		Context: &Context{
 			Storage: storage,
-			Reload:  config.Reload.GetOrDefault(60 * 24 * time.Hour),
 		},
 		Clock:       app,
 		Credentials: creds,

@@ -43,6 +43,7 @@ type Sync struct {
 	*Context
 	*external.Client
 	Now    time.Time
+	Reload time.Duration
 	report *html.Writer
 }
 

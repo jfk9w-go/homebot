@@ -2,6 +2,7 @@ package tinkoff
 
 import (
 	"context"
+	"strconv"
 	"strings"
 	"time"
 
@@ -11,11 +12,11 @@ import (
 	telegram "github.com/jfk9w-go/telegram-bot-api"
 	"github.com/jfk9w-go/telegram-bot-api/ext"
 	"github.com/jfk9w-go/telegram-bot-api/ext/tapp"
+	"github.com/pkg/errors"
 )
 
 type Context struct {
 	Storage
-	Reload time.Duration
 }
 
 type Service struct {
@@ -51,10 +52,21 @@ func (s *Service) Update_bank_statement(ctx context.Context, tgclient telegram.C
 		return err
 	}
 
+	reload := 60 * 24 * time.Hour
+	if daysStr := cmd.Arg(0); daysStr != "" {
+		days, err := strconv.Atoi(daysStr)
+		if err != nil {
+			return errors.Wrap(err, "first parameter must be empty or a number of days")
+		}
+
+		reload = time.Duration(days) * 24 * time.Hour
+	}
+
 	sync := &Sync{
 		Context: s.Context,
 		Client:  client,
 		Now:     s.Now(),
+		Reload:  reload,
 		report:  ext.HTML(ctx, tgclient, cmd.Chat.ID),
 	}
 
