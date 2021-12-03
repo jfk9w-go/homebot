@@ -53,7 +53,7 @@ func (s *SQLStorage) GetLatestTime(ctx context.Context, entity interface{}, tena
 		return time.Time{}, err
 	}
 
-	latestTime := new(*time.Time)
+	latestTime := new(time.Time)
 	if err := tx.Model(entity).
 		Select(fmt.Sprintf(`max("%s")`, timeColumn)).
 		Scan(latestTime).
@@ -61,11 +61,7 @@ func (s *SQLStorage) GetLatestTime(ctx context.Context, entity interface{}, tena
 		return time.Time{}, err
 	}
 
-	if *latestTime == nil {
-		return time.Time{}, nil
-	}
-
-	return **latestTime, nil
+	return *latestTime, nil
 }
 
 func (s *SQLStorage) Insert(ctx context.Context, batch interface{}) error {
