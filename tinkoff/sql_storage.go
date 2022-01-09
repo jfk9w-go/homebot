@@ -54,10 +54,14 @@ func (s *SQLStorage) GetLatestTime(ctx context.Context, entity interface{}, tena
 		return
 	}
 
-	err = tx.Model(entity).
+	var latestTimePtr = new(time.Time)
+	if err = tx.Model(entity).
 		Select(fmt.Sprintf(`max("%s")`, timeColumn)).
-		Scan(&latestTime).
-		Error
+		Scan(&latestTimePtr).
+		Error; err == nil && latestTimePtr != nil {
+		latestTime = *latestTimePtr
+	}
+
 	return
 }
 
