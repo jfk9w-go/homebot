@@ -40,28 +40,25 @@ func (s *SQLStorage) UpdateAccounts(ctx context.Context, accounts []external.Acc
 		Error
 }
 
-func (s *SQLStorage) GetLatestTime(ctx context.Context, entity interface{}, tenant interface{}) (time.Time, error) {
+func (s *SQLStorage) GetLatestTime(ctx context.Context, entity interface{}, tenant interface{}) (latestTime time.Time, err error) {
 	timeColumns := gormf.CollectTaggedColumns(entity, "time")
 	if len(timeColumns) == 0 {
-		return time.Time{}, errors.Errorf("no primary keys in %T", entity)
+		err = errors.Errorf("no primary keys in %T", entity)
+		return
 	}
 
 	timeColumn := timeColumns[0]
 	tx := s.Unmask().WithContext(ctx)
-	tx, err := addTenantFilter(tx, entity, tenant)
+	tx, err = addTenantFilter(tx, entity, tenant)
 	if err != nil {
-		return time.Time{}, err
+		return
 	}
 
-	latestTime := new(time.Time)
-	if err := tx.Model(entity).
+	err = tx.Model(entity).
 		Select(fmt.Sprintf(`max("%s")`, timeColumn)).
-		Scan(latestTime).
-		Error; err != nil {
-		return time.Time{}, err
-	}
-
-	return *latestTime, nil
+		Scan(&latestTime).
+		Error
+	return
 }
 
 func (s *SQLStorage) Insert(ctx context.Context, batch interface{}) error {
