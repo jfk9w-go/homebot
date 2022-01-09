@@ -2,6 +2,7 @@ package tinkoff
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"time"
 
@@ -54,12 +55,12 @@ func (s *SQLStorage) GetLatestTime(ctx context.Context, entity interface{}, tena
 		return
 	}
 
-	var latestTimePtr = new(time.Time)
+	value := new(sql.NullTime)
 	if err = tx.Model(entity).
 		Select(fmt.Sprintf(`max("%s")`, timeColumn)).
-		Scan(&latestTimePtr).
-		Error; err == nil && latestTimePtr != nil {
-		latestTime = *latestTimePtr
+		Scan(value).
+		Error; err == nil && value.Valid {
+		latestTime = value.Time
 	}
 
 	return
