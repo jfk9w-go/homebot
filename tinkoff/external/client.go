@@ -302,8 +302,8 @@ func (c *Client) PurchasedSecurities(ctx context.Context, now time.Time) ([]Purc
 }
 
 func (c *Client) Candles(ctx context.Context, ticker string, resolution interface{}, start, end time.Time) ([]Candle, error) {
-	start = common.TrimDate(start.Add(-24 * time.Hour))
-	end = common.TrimDate(end.Add(24 * time.Hour))
+	start = common.TrimDate(start)
+	end = common.TrimDate(end.Add(-24 * time.Hour))
 
 	var r Response
 	if err := c.httpClient.POST(CandlesEndpoint).
