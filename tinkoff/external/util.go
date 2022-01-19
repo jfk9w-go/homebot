@@ -23,7 +23,7 @@ var (
 	TradingOperationsEndpoint   = Host + "/api/trading/user/operations"
 	PurchasedSecuritiesEndpoint = Host + "/api/trading/portfolio/purchased_securities"
 
-	tradingOperationsStart = time.Date(2015, 1, 1, 0, 0, 0, 0, time.UTC)
+	TradingOperationsStart = time.Date(2015, 1, 1, 0, 0, 0, 0, time.UTC)
 	origin                 = "web,ib5,platform"
 )
 

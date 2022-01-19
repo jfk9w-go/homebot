@@ -140,6 +140,28 @@ type PurchasedSecurity struct {
 	Time time.Time `json:"-" gorm:"primaryKey;type:date"`
 }
 
+type CandleDate time.Time
+
+func (d *CandleDate) UnmarshalJSON(data []byte) error {
+	var value int64
+	if err := json.Unmarshal(data, &value); err != nil {
+		return err
+	}
+
+	*d = CandleDate(time.Unix(value, 0))
+	return nil
+}
+
+type Candle struct {
+	Ticker string     `json:"-" gorm:"primaryKey"`
+	Date   CandleDate `json:"date" gorm:"primaryKey;type:date"`
+	Open   float64    `json:"o" gorm:"not null"`
+	Close  float64    `json:"c" gorm:"not null"`
+	High   float64    `json:"h" gorm:"not null"`
+	Low    float64    `json:"l" gorm:"not null"`
+	Volume float64    `json:"v" gorm:"not null"`
+}
+
 //
 // Shopping receipt
 //

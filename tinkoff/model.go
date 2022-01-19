@@ -28,9 +28,16 @@ func DecodeCredentialsFrom(input flu.Input) (CredentialStore, error) {
 	return creds, flu.DecodeFrom(input, CredentialsCodec(&creds))
 }
 
+type TradingPosition struct {
+	Ticker   string
+	BuyTime  *time.Time
+	SellTime *time.Time
+}
+
 type Storage interface {
 	UpdateAccounts(ctx context.Context, batch []external.Account) error
 	GetLatestTime(ctx context.Context, entity interface{}, tenant interface{}) (time.Time, error)
+	GetTradingPositions(ctx context.Context, from time.Time) ([]TradingPosition, error)
 	Insert(ctx context.Context, batch interface{}) error
 }
 

@@ -3,6 +3,7 @@ package hassgpx
 import (
 	"context"
 	"fmt"
+	"homebot/common"
 	"strings"
 	"time"
 
@@ -33,7 +34,7 @@ func (s *Service) CommandScope() tapp.CommandScope {
 func (s *Service) Get_GPX_track(ctx context.Context, client telegram.Client, cmd *telegram.Command) error {
 	entityID := s.UserIDs[cmd.User.ID]
 	since := s.Now().Add(-time.Duration(s.LastDays) * 24 * time.Hour)
-	since = time.Date(since.Year(), since.Month(), since.Day(), 0, 0, 0, 0, time.UTC)
+	since = common.TrimDate(since)
 	waypoints, err := s.GetLastTrack(ctx, entityID, since, s.MaxSpeed, s.MoveInterval)
 	if err != nil {
 		return errors.Wrap(err, "get last track")

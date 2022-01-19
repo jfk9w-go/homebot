@@ -23,7 +23,7 @@ func main() {
 	app := Instance{tapp.Create(GitCommit, flu.DefaultClock)}
 	defer flu.CloseQuietly(app)
 	app.ApplyExtensions(
-		tinkoff.Extension{sync.Accounts, sync.TradingOperations, sync.PurchasedSecurities},
+		tinkoff.Extension{sync.Accounts, sync.TradingOperations, sync.PurchasedSecurities, sync.Candles},
 		hassgpx.Extension,
 	)
 

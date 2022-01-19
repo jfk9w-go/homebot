@@ -31,6 +31,7 @@ func (s *SQLStorage) Init(ctx context.Context) error {
 		external.ShoppingReceiptItem{},
 		external.TradingOperation{},
 		external.PurchasedSecurity{},
+		external.Candle{},
 	)
 }
 
@@ -64,6 +65,15 @@ func (s *SQLStorage) GetLatestTime(ctx context.Context, entity interface{}, tena
 	}
 
 	return
+}
+
+func (s *SQLStorage) GetTradingPositions(ctx context.Context, from time.Time) ([]TradingPosition, error) {
+	ps := make([]TradingPosition, 0)
+	return ps, s.Unmask().WithContext(ctx).
+		Table("trading_positions").
+		Where("sell_time is null or sell_time >= ?", from).
+		Select(&ps).
+		Error
 }
 
 func (s *SQLStorage) Insert(ctx context.Context, batch interface{}) error {

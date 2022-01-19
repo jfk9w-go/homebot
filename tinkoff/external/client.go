@@ -3,6 +3,7 @@ package external
 import (
 	"context"
 	"fmt"
+	"homebot/common"
 	"net/http"
 	"sort"
 	"strconv"
@@ -231,15 +232,15 @@ func (c *Client) ShoppingReceipt(ctx context.Context, operationID uint64) (*Shop
 	return receipt, nil
 }
 
-func (c *Client) TradingOperations(ctx context.Context, now time.Time, since time.Time) ([]TradingOperation, error) {
-	formatTime := func(t time.Time) string {
-		if t.Before(tradingOperationsStart) {
-			t = tradingOperationsStart
-		}
-
-		return t.Format("2006-01-02T15:04:05Z")
+func formatTime(t time.Time) string {
+	if t.Before(TradingOperationsStart) {
+		t = TradingOperationsStart
 	}
 
+	return t.Format("2006-01-02T15:04:05Z")
+}
+
+func (c *Client) TradingOperations(ctx context.Context, now time.Time, since time.Time) ([]TradingOperation, error) {
 	var r Response
 	if err := c.httpClient.POST(TradingOperationsEndpoint).
 		QueryParam("sessionId", c.sessionID).
@@ -298,4 +299,39 @@ func (c *Client) PurchasedSecurities(ctx context.Context, now time.Time) ([]Purc
 	}
 
 	return securities.Data, nil
+}
+
+func (c *Client) Candles(ctx context.Context, ticker string, resolution interface{}, start, end time.Time) ([]Candle, error) {
+	start = common.TrimDate(start.Add(-24 * time.Hour))
+	end = common.TrimDate(end.Add(24 * time.Hour))
+
+	var r Response
+	if err := c.httpClient.POST(PurchasedSecuritiesEndpoint).
+		QueryParam("sessionId", c.sessionID).
+		BodyEncoder(flu.JSON(map[string]interface{}{
+			"from":       formatTime(start),
+			"end":        formatTime(end),
+			"ticker":     ticker,
+			"resolution": resolution,
+		})).
+		Context(ctx).
+		Execute().
+		DecodeBody(&r).
+		Error; err != nil {
+		return nil, err
+	}
+
+	var candles struct {
+		Candles []Candle `json:"candles"`
+	}
+
+	if err := r.Unmarshal("Ok", &candles); err != nil {
+		return nil, err
+	}
+
+	for i := range candles.Candles {
+		(&candles.Candles[i]).Ticker = ticker
+	}
+
+	return candles.Candles, nil
 }
