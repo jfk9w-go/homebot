@@ -50,6 +50,10 @@ func (c candles) Run(ctx context.Context, sync *tinkoff.Sync) (int, error) {
 			return 0, errors.Wrapf(err, "get candles for %s [%s, %s]", position.Ticker, buyTime, sellTime)
 		}
 
+		if len(candles) == 0 {
+			continue
+		}
+
 		if err := sync.Insert(ctx, candles); err != nil {
 			return 0, errors.Wrap(err, "update")
 		}

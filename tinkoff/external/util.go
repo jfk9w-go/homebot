@@ -22,6 +22,7 @@ var (
 	ShoppingReceiptEndpount     = Host + "/api/common/v1/shopping_receipt"
 	TradingOperationsEndpoint   = Host + "/api/trading/user/operations"
 	PurchasedSecuritiesEndpoint = Host + "/api/trading/portfolio/purchased_securities"
+	CandlesEndpoint             = Host + "/api/trading/symbols/candles"
 
 	TradingOperationsStart = time.Date(2015, 1, 1, 0, 0, 0, 0, time.UTC)
 	origin                 = "web,ib5,platform"

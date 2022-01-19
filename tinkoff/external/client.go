@@ -306,11 +306,11 @@ func (c *Client) Candles(ctx context.Context, ticker string, resolution interfac
 	end = common.TrimDate(end.Add(24 * time.Hour))
 
 	var r Response
-	if err := c.httpClient.POST(PurchasedSecuritiesEndpoint).
+	if err := c.httpClient.POST(CandlesEndpoint).
 		QueryParam("sessionId", c.sessionID).
 		BodyEncoder(flu.JSON(map[string]interface{}{
 			"from":       formatTime(start),
-			"end":        formatTime(end),
+			"to":         formatTime(end),
 			"ticker":     ticker,
 			"resolution": resolution,
 		})).
