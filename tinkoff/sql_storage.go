@@ -72,7 +72,7 @@ func (s *SQLStorage) GetTradingPositions(ctx context.Context, from time.Time) ([
 	return ps, s.Unmask().WithContext(ctx).
 		Table("trading_positions").
 		Where("sell_time is null or sell_time >= ?", from).
-		Select(&ps).
+		Scan(&ps).
 		Error
 }
 
