@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"homebot/common"
 	"homebot/tinkoff"
 	"homebot/tinkoff/external"
 
@@ -34,7 +35,7 @@ func (c candles) Run(ctx context.Context, sync *tinkoff.Sync) (int, error) {
 		)
 
 		if position.BuyTime != nil {
-			buyTime = *position.BuyTime
+			buyTime = common.TrimDate(*position.BuyTime)
 		}
 
 		if buyTime.Before(startTime) {
@@ -42,7 +43,7 @@ func (c candles) Run(ctx context.Context, sync *tinkoff.Sync) (int, error) {
 		}
 
 		if position.SellTime != nil {
-			sellTime = *position.SellTime
+			sellTime = common.TrimDate(*position.SellTime)
 		}
 
 		candles, err := sync.Candles(ctx, position.Ticker, "D", buyTime, sellTime)
