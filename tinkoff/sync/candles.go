@@ -18,7 +18,7 @@ func (c candles) Name() string {
 
 func (c candles) Run(ctx context.Context, sync *tinkoff.Sync) (int, error) {
 	startTime := sync.Now.Add(-sync.Reload)
-	positions, err := sync.GetTradingPositions(ctx, startTime)
+	positions, err := sync.GetTradingPositions(ctx, startTime, sync.Username())
 	if err != nil {
 		return 0, errors.Wrap(err, "get trading positions")
 	}

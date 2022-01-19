@@ -37,7 +37,7 @@ type TradingPosition struct {
 type Storage interface {
 	UpdateAccounts(ctx context.Context, batch []external.Account) error
 	GetLatestTime(ctx context.Context, entity interface{}, tenant interface{}) (time.Time, error)
-	GetTradingPositions(ctx context.Context, from time.Time) ([]TradingPosition, error)
+	GetTradingPositions(ctx context.Context, from time.Time, username string) ([]TradingPosition, error)
 	Insert(ctx context.Context, batch interface{}) error
 }
 

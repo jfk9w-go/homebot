@@ -67,11 +67,11 @@ func (s *SQLStorage) GetLatestTime(ctx context.Context, entity interface{}, tena
 	return
 }
 
-func (s *SQLStorage) GetTradingPositions(ctx context.Context, from time.Time) ([]TradingPosition, error) {
+func (s *SQLStorage) GetTradingPositions(ctx context.Context, from time.Time, username string) ([]TradingPosition, error) {
 	ps := make([]TradingPosition, 0)
 	return ps, s.Unmask().WithContext(ctx).
 		Table("trading_positions").
-		Where("sell_time is null or sell_time >= ?", from).
+		Where("(sell_time is null or sell_time >= ?) and username = ?", from, username).
 		Scan(&ps).
 		Error
 }
