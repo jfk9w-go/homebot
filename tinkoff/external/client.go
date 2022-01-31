@@ -160,7 +160,7 @@ func (c *Client) Accounts(ctx context.Context) ([]Account, error) {
 }
 
 func (c *Client) Operations(ctx context.Context, now time.Time, accountID string, since time.Time) ([]Operation, error) {
-	formatTime := func(t time.Time) string { return strconv.FormatInt(t.UnixNano()/1e6, 10) }
+	formatTime := func(t time.Time) string { return strconv.FormatInt(t.UnixMilli(), 10) }
 	var r Response
 	if err := c.httpClient.GET(OperationsEndpoint).
 		QueryParam("sessionid", c.sessionID).
@@ -300,34 +300,54 @@ func (c *Client) PurchasedSecurities(ctx context.Context, now time.Time) ([]Purc
 	return securities.Data, nil
 }
 
+const MaxCandlePeriod = 12 * 30 * 24 * time.Hour // 1 year
+
 func (c *Client) Candles(ctx context.Context, ticker string, resolution interface{}, start, end time.Time) ([]Candle, error) {
-	var r Response
-	if err := c.httpClient.POST(CandlesEndpoint).
-		QueryParam("sessionId", c.sessionID).
-		BodyEncoder(flu.JSON(map[string]interface{}{
-			"from":       formatTime(start),
-			"to":         formatTime(end),
-			"ticker":     ticker,
-			"resolution": resolution,
-		})).
-		Context(ctx).
-		Execute().
-		DecodeBody(&r).
-		Error; err != nil {
-		return nil, err
+	candles := make([]Candle, 0)
+	for {
+		var (
+			localEnd = end
+			r        Response
+		)
+
+		if end.Sub(start) > MaxCandlePeriod {
+			localEnd = start.Add(MaxCandlePeriod)
+		}
+
+		if err := c.httpClient.POST(CandlesEndpoint).
+			QueryParam("sessionId", c.sessionID).
+			BodyEncoder(flu.JSON(map[string]interface{}{
+				"from":       formatTime(start),
+				"to":         formatTime(localEnd),
+				"ticker":     ticker,
+				"resolution": resolution,
+			})).
+			Context(ctx).
+			Execute().
+			DecodeBody(&r).
+			Error; err != nil {
+			return nil, err
+		}
+
+		var resp struct {
+			Candles []Candle `json:"candles"`
+		}
+
+		if err := r.Unmarshal("Ok", &resp); err != nil {
+			return nil, err
+		}
+
+		for i := range resp.Candles {
+			(&resp.Candles[i]).Ticker = ticker
+		}
+
+		candles = append(candles, resp.Candles...)
+		if localEnd == end {
+			break
+		}
+
+		start = localEnd
 	}
 
-	var candles struct {
-		Candles []Candle `json:"candles"`
-	}
-
-	if err := r.Unmarshal("Ok", &candles); err != nil {
-		return nil, err
-	}
-
-	for i := range candles.Candles {
-		(&candles.Candles[i]).Ticker = ticker
-	}
-
-	return candles.Candles, nil
+	return candles, nil
 }
