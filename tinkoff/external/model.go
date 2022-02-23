@@ -7,6 +7,10 @@ import (
 	"gopkg.in/guregu/null.v3"
 )
 
+type Credential struct {
+	Username, Phone, Password string
+}
+
 //
 // Operation
 //

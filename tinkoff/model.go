@@ -11,13 +11,9 @@ import (
 	"github.com/jfk9w-go/telegram-bot-api/ext/html"
 )
 
-type Credential struct {
-	Username, Password string
-}
-
 var CredentialsCodec = flu.Gob
 
-type CredentialStore map[telegram.ID]Credential
+type CredentialStore map[telegram.ID]external.Credential
 
 func (creds CredentialStore) EncodeTo(output flu.Output) error {
 	return flu.EncodeTo(CredentialsCodec(creds), output)

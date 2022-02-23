@@ -16,6 +16,12 @@ import (
 
 type Confirm func(ctx context.Context) (code string, err error)
 
+type ClientConfig struct {
+	Username string
+	Phone    string
+	Password string
+}
+
 type Client struct {
 	httpClient *httpf.Client
 	username   string
@@ -46,15 +52,15 @@ func NewClient(ctx context.Context, username string) (*Client, error) {
 	}, nil
 }
 
-func Authorize(ctx context.Context, username, password string, confirm Confirm) (*Client, error) {
-	client, err := NewClient(ctx, username)
+func Authorize(ctx context.Context, cred Credential, confirm Confirm) (*Client, error) {
+	client, err := NewClient(ctx, cred.Username)
 	if err != nil {
 		return nil, errors.Wrap(err, "create client")
 	}
 
-	ticket, err := client.SignUp(ctx, password)
+	ticket, err := client.SignUp(ctx, "WAITING_CONFIRMATION", new(httpf.Form).Add("phone", cred.Phone))
 	if err != nil {
-		return nil, errors.Wrap(err, "sign up")
+		return nil, errors.Wrap(err, "sign in with phone")
 	}
 
 	code, err := confirm(ctx)
@@ -64,6 +70,10 @@ func Authorize(ctx context.Context, username, password string, confirm Confirm) 
 
 	if err := client.Confirm(ctx, ticket, "sign_up", strings.Trim(code, " \n\t")); err != nil {
 		return nil, errors.Wrap(err, "confirm")
+	}
+
+	if _, err := client.SignUp(ctx, "OK", new(httpf.Form).Add("password", cred.Password)); err != nil {
+		return nil, errors.Wrap(err, "sign in with password")
 	}
 
 	if err := client.LevelUp(ctx); err != nil {
@@ -77,14 +87,12 @@ func (c *Client) Username() string {
 	return c.username
 }
 
-func (c *Client) SignUp(ctx context.Context, password string) (string, error) {
+func (c *Client) SignUp(ctx context.Context, expectedStatusCode string, body flu.EncoderTo) (string, error) {
 	var r Response
 	if err := c.httpClient.POST(SignUpEndpoint).
 		QueryParam("origin", origin).
 		QueryParam("sessionid", c.sessionID).
-		BodyEncoder(new(httpf.Form).
-			Add("username", c.username).
-			Add("password", password)).
+		BodyEncoder(body).
 		Context(ctx).
 		Execute().
 		DecodeBody(&r).
@@ -92,7 +100,7 @@ func (c *Client) SignUp(ctx context.Context, password string) (string, error) {
 		return "", err
 	}
 
-	if err := r.Unmarshal("WAITING_CONFIRMATION", nil); err != nil {
+	if err := r.Unmarshal(expectedStatusCode, nil); err != nil {
 		return "", err
 	}
 

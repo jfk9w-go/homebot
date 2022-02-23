@@ -37,7 +37,7 @@ func (s *Service) CommandScope() tapp.CommandScope {
 
 func (s *Service) Update_bank_statement(ctx context.Context, tgclient telegram.Client, cmd *telegram.Command) error {
 	cred := s.Credentials[cmd.User.ID]
-	client, err := external.Authorize(ctx, cred.Username, cred.Password, func(ctx context.Context) (string, error) {
+	client, err := external.Authorize(ctx, cred, func(ctx context.Context) (string, error) {
 		ctx, cancel := context.WithTimeout(ctx, time.Minute)
 		defer cancel()
 		m, err := tgclient.Ask(ctx, cmd.Chat.ID, &telegram.Text{Text: "Code:"}, nil)
