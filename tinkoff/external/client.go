@@ -23,20 +23,17 @@ type ClientConfig struct {
 }
 
 type Client struct {
-	httpClient *httpf.Client
-	username   string
-	sessionID  string
+	httpf.Client
+	username string
 }
 
 func NewClient(ctx context.Context, username string) (*Client, error) {
-	httpClient := httpf.NewClient(nil).AcceptStatus(http.StatusOK)
 	var r Response
-	if err := httpClient.GET(SessionEndpoint).
-		QueryParam("origin", origin).
-		Context(ctx).
-		Execute().
+	if err := httpf.GET(SessionEndpoint).
+		Query("origin", origin).
+		Exchange(ctx, nil).
 		DecodeBody(&r).
-		Error; err != nil {
+		Error(); err != nil {
 		return nil, errors.Wrap(err, "init session")
 	}
 
@@ -46,9 +43,10 @@ func NewClient(ctx context.Context, username string) (*Client, error) {
 	}
 
 	return &Client{
-		httpClient: httpClient,
-		username:   username,
-		sessionID:  sessionID,
+		Client: &http.Client{
+			Transport: withQueryParams(httpf.NewDefaultTransport(), sessionID),
+		},
+		username: username,
 	}, nil
 }
 
@@ -58,7 +56,7 @@ func Authorize(ctx context.Context, cred Credential, confirm Confirm) (*Client, 
 		return nil, errors.Wrap(err, "create client")
 	}
 
-	ticket, err := client.SignUp(ctx, "WAITING_CONFIRMATION", new(httpf.Form).Add("phone", cred.Phone))
+	ticket, err := client.SignUp(ctx, "WAITING_CONFIRMATION", new(httpf.Form).Set("phone", cred.Phone))
 	if err != nil {
 		return nil, errors.Wrap(err, "sign in with phone")
 	}
@@ -72,7 +70,7 @@ func Authorize(ctx context.Context, cred Credential, confirm Confirm) (*Client, 
 		return nil, errors.Wrap(err, "confirm")
 	}
 
-	if _, err := client.SignUp(ctx, "OK", new(httpf.Form).Add("password", cred.Password)); err != nil {
+	if _, err := client.SignUp(ctx, "OK", new(httpf.Form).Set("password", cred.Password)); err != nil {
 		return nil, errors.Wrap(err, "sign in with password")
 	}
 
@@ -89,14 +87,10 @@ func (c *Client) Username() string {
 
 func (c *Client) SignUp(ctx context.Context, expectedStatusCode string, body flu.EncoderTo) (string, error) {
 	var r Response
-	if err := c.httpClient.POST(SignUpEndpoint).
-		QueryParam("origin", origin).
-		QueryParam("sessionid", c.sessionID).
-		BodyEncoder(body).
-		Context(ctx).
-		Execute().
+	if err := httpf.POST(SignUpEndpoint, body).
+		Exchange(ctx, c).
 		DecodeBody(&r).
-		Error; err != nil {
+		Error(); err != nil {
 		return "", err
 	}
 
@@ -109,17 +103,14 @@ func (c *Client) SignUp(ctx context.Context, expectedStatusCode string, body flu
 
 func (c *Client) Confirm(ctx context.Context, initialOperationTicket, initialOperation, code string) error {
 	var r Response
-	if err := c.httpClient.POST(ConfirmEndpoint).
-		QueryParam("origin", origin).
-		QueryParam("sessionid", c.sessionID).
-		BodyEncoder(new(httpf.Form).
-			Add("initialOperationTicket", initialOperationTicket).
-			Add("initialOperation", initialOperation).
-			Add("confirmationData", fmt.Sprintf(`{"SMSBYID":"%s"}`, code))).
-		Context(ctx).
-		Execute().
+	if err := httpf.POST(ConfirmEndpoint,
+		new(httpf.Form).
+			Set("initialOperationTicket", initialOperationTicket).
+			Set("initialOperation", initialOperation).
+			Set("confirmationData", fmt.Sprintf(`{"SMSBYID":"%s"}`, code))).
+		Exchange(ctx, c).
 		DecodeBody(&r).
-		Error; err != nil {
+		Error(); err != nil {
 		return err
 	}
 
@@ -127,25 +118,20 @@ func (c *Client) Confirm(ctx context.Context, initialOperationTicket, initialOpe
 }
 
 func (c *Client) LevelUp(ctx context.Context) error {
-	return c.httpClient.GET(LevelUpEndpoint).
-		QueryParam("sessionid", c.sessionID).
-		QueryParam("origin", origin).
-		Context(ctx).
-		Execute().
-		Error
+	return httpf.GET(LevelUpEndpoint).
+		Exchange(ctx, c).
+		Error()
 }
 
 func (c *Client) Accounts(ctx context.Context) ([]Account, error) {
 	var r Response
-	if err := c.httpClient.POST(GroupedRequestsEndpount).
-		QueryParam("_methods", "accounts_flat").
-		QueryParam("sessionid", c.sessionID).
-		BodyEncoder(new(httpf.Form).
-			Add("requestsData", `[{"key":0,"operation":"accounts_flat"}]`)).
-		Context(ctx).
-		Execute().
+	if err := httpf.POST(GroupedRequestsEndpount,
+		new(httpf.Form).
+			Set("requestsData", `[{"key":0,"operation":"accounts_flat"}]`)).
+		Query("_methods", "accounts_flat").
+		Exchange(ctx, c).
 		DecodeBody(&r).
-		Error; err != nil {
+		Error(); err != nil {
 		return nil, err
 	}
 
@@ -168,17 +154,15 @@ func (c *Client) Accounts(ctx context.Context) ([]Account, error) {
 }
 
 func (c *Client) Operations(ctx context.Context, now time.Time, accountID string, since time.Time) ([]Operation, error) {
-	formatTime := func(t time.Time) string { return strconv.FormatInt(t.UnixMilli(), 10) }
+	formatTime := func(t time.Time) string { return strconv.FormatInt(t.UnixNano()/1e6, 10) }
 	var r Response
-	if err := c.httpClient.GET(OperationsEndpoint).
-		QueryParam("sessionid", c.sessionID).
-		QueryParam("account", accountID).
-		QueryParam("start", formatTime(since)).
-		QueryParam("end", formatTime(now)).
-		Context(ctx).
-		Execute().
+	if err := httpf.GET(OperationsEndpoint).
+		Query("account", accountID).
+		Query("start", formatTime(since)).
+		Query("end", formatTime(now)).
+		Exchange(ctx, c).
 		DecodeBody(&r).
-		Error; err != nil {
+		Error(); err != nil {
 		return nil, err
 	}
 
@@ -193,13 +177,11 @@ func (c *Client) Operations(ctx context.Context, now time.Time, accountID string
 
 func (c *Client) ShoppingReceipt(ctx context.Context, operationID uint64) (*ShoppingReceipt, error) {
 	var r Response
-	if err := c.httpClient.GET(ShoppingReceiptEndpount).
-		QueryParam("sessionid", c.sessionID).
-		QueryParam("operationId", strconv.FormatUint(operationID, 10)).
-		Context(ctx).
-		Execute().
+	if err := httpf.GET(ShoppingReceiptEndpount).
+		Query("operationId", strconv.FormatUint(operationID, 10)).
+		Exchange(ctx, c).
 		DecodeBody(&r).
-		Error; err != nil {
+		Error(); err != nil {
 		return nil, err
 	}
 
@@ -249,17 +231,15 @@ func formatTime(t time.Time) string {
 
 func (c *Client) TradingOperations(ctx context.Context, now time.Time, since time.Time) ([]TradingOperation, error) {
 	var r Response
-	if err := c.httpClient.POST(TradingOperationsEndpoint).
-		QueryParam("sessionId", c.sessionID).
-		BodyEncoder(flu.JSON(map[string]interface{}{
+	if err := httpf.POST(TradingOperationsEndpoint,
+		flu.JSON(map[string]interface{}{
 			"from":               formatTime(since),
 			"to":                 formatTime(now),
 			"overnightsDisabled": false,
 		})).
-		Context(ctx).
-		Execute().
+		Exchange(ctx, c).
 		DecodeBody(&r).
-		Error; err != nil {
+		Error(); err != nil {
 		return nil, err
 	}
 
@@ -280,16 +260,14 @@ func (c *Client) TradingOperations(ctx context.Context, now time.Time, since tim
 
 func (c *Client) PurchasedSecurities(ctx context.Context, now time.Time) ([]PurchasedSecurity, error) {
 	var r Response
-	if err := c.httpClient.POST(PurchasedSecuritiesEndpoint).
-		QueryParam("sessionId", c.sessionID).
-		BodyEncoder(flu.JSON(map[string]interface{}{
+	if err := httpf.POST(PurchasedSecuritiesEndpoint,
+		flu.JSON(map[string]interface{}{
 			"brokerAccountType": "Tinkoff",
 			"currency":          "RUB",
 		})).
-		Context(ctx).
-		Execute().
+		Exchange(ctx, c).
 		DecodeBody(&r).
-		Error; err != nil {
+		Error(); err != nil {
 		return nil, err
 	}
 
@@ -322,18 +300,16 @@ func (c *Client) Candles(ctx context.Context, ticker string, resolution interfac
 			localEnd = start.Add(MaxCandlePeriod)
 		}
 
-		if err := c.httpClient.POST(CandlesEndpoint).
-			QueryParam("sessionId", c.sessionID).
-			BodyEncoder(flu.JSON(map[string]interface{}{
+		if err := httpf.POST(CandlesEndpoint,
+			flu.JSON(map[string]interface{}{
 				"from":       formatTime(start),
 				"to":         formatTime(localEnd),
 				"ticker":     ticker,
 				"resolution": resolution,
 			})).
-			Context(ctx).
-			Execute().
+			Exchange(ctx, c).
 			DecodeBody(&r).
-			Error; err != nil {
+			Error(); err != nil {
 			return nil, err
 		}
 
@@ -358,4 +334,15 @@ func (c *Client) Candles(ctx context.Context, ticker string, resolution interfac
 	}
 
 	return candles, nil
+}
+
+func withQueryParams(rt http.RoundTripper, sessionID string) httpf.RoundTripperFunc {
+	return func(req *http.Request) (*http.Response, error) {
+		query := req.URL.Query()
+		query.Set("sessionId", sessionID)
+		query.Set("sessionid", sessionID)
+		query.Set("origin", origin)
+		req.URL.RawQuery = query.Encode()
+		return rt.RoundTrip(req)
+	}
 }
