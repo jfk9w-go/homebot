@@ -3,6 +3,8 @@ package sync
 import (
 	"context"
 
+	"github.com/jfk9w-go/flu/backoff"
+
 	"homebot/tinkoff"
 	"homebot/tinkoff/external"
 
@@ -34,12 +36,25 @@ func (o Operations) Run(ctx context.Context, sync *tinkoff.Sync) (int, error) {
 
 	for i, operation := range operations {
 		if operation.HasShoppingReceipt {
-			receipt, err := sync.ShoppingReceipt(ctx, operation.ID)
-			if err != nil {
-				return 0, errors.Wrapf(err, "get receipt %d", operation.ID)
+			if err := (backoff.Retry{
+				Body: func(ctx context.Context) error {
+					receipt, err := sync.ShoppingReceipt(ctx, operation.ID)
+					switch {
+					case err == nil:
+						operations[i].ShoppingReceipt = receipt
+						return nil
+					case err.Error() == "REQUEST_RATE_LIMIT_EXCEEDED":
+						return err
+					default:
+						sync.Report.Bold("\nReceipt %s • ", operation.ID).Text(err.Error())
+						return nil
+					}
+				},
+				Retries: 3,
+				Backoff: backoff.Exp{Base: 2, Power: 1},
+			}).Do(ctx); err != nil {
+				return 0, errors.Wrapf(err, "get receipt %s", operation.ID)
 			}
-
-			operations[i].ShoppingReceipt = receipt
 		}
 	}
 

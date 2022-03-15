@@ -67,7 +67,7 @@ func (s *Service) Update_bank_statement(ctx context.Context, tgclient telegram.C
 		Client:  client,
 		Now:     s.Now(),
 		Reload:  reload,
-		report:  ext.HTML(ctx, tgclient, cmd.Chat.ID),
+		Report:  ext.HTML(ctx, tgclient, cmd.Chat.ID),
 	}
 
 	for _, executor := range s.Executors {

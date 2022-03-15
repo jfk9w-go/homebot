@@ -47,25 +47,25 @@ type Sync struct {
 	*external.Client
 	Now    time.Time
 	Reload time.Duration
-	report *html.Writer
+	Report *html.Writer
 }
 
 func (s *Sync) Run(ctx context.Context, executor Executor) error {
 	count, err := executor.Run(ctx, s)
-	s.report.Bold("\n%s • ", executor.Name())
+	s.Report.Bold("\n%s • ", executor.Name())
 	if err != nil {
 		if flu.IsContextRelated(err) {
 			return err
 		} else {
-			s.report.Text(err.Error())
+			s.Report.Text(err.Error())
 		}
 	} else {
-		s.report.Text("%d items synced", count)
+		s.Report.Text("%d items synced", count)
 	}
 
 	return nil
 }
 
 func (s *Sync) Close() error {
-	return s.report.Flush()
+	return s.Report.Flush()
 }
