@@ -3,6 +3,7 @@ package sync
 import (
 	"context"
 	"strings"
+	"time"
 
 	"github.com/jfk9w-go/flu/backoff"
 
@@ -52,7 +53,7 @@ func (o Operations) Run(ctx context.Context, sync *tinkoff.Sync) (int, error) {
 					}
 				},
 				Retries: 3,
-				Backoff: backoff.Exp{Base: 2, Power: 1},
+				Backoff: backoff.Exp{Base: 2 * int64(time.Second), Power: 1},
 			}).Do(ctx); err != nil {
 				return 0, errors.Wrapf(err, "get receipt %d", operation.ID)
 			}
