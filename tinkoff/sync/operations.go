@@ -2,6 +2,7 @@ package sync
 
 import (
 	"context"
+	"strings"
 
 	"github.com/jfk9w-go/flu/backoff"
 
@@ -43,17 +44,17 @@ func (o Operations) Run(ctx context.Context, sync *tinkoff.Sync) (int, error) {
 					case err == nil:
 						operations[i].ShoppingReceipt = receipt
 						return nil
-					case err.Error() == "REQUEST_RATE_LIMIT_EXCEEDED":
+					case strings.Contains(err.Error(), "REQUEST_RATE_LIMIT_EXCEEDED"):
 						return err
 					default:
-						sync.Report.Bold("\nReceipt %s • ", operation.ID).Text(err.Error())
+						sync.Report.Bold("\nReceipt %d • ", operation.ID).Text(err.Error())
 						return nil
 					}
 				},
 				Retries: 3,
 				Backoff: backoff.Exp{Base: 2, Power: 1},
 			}).Do(ctx); err != nil {
-				return 0, errors.Wrapf(err, "get receipt %s", operation.ID)
+				return 0, errors.Wrapf(err, "get receipt %d", operation.ID)
 			}
 		}
 	}
