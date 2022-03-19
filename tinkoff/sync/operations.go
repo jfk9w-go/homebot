@@ -2,10 +2,6 @@ package sync
 
 import (
 	"context"
-	"strings"
-	"time"
-
-	"github.com/jfk9w-go/flu/backoff"
 
 	"homebot/tinkoff"
 	"homebot/tinkoff/external"
@@ -15,6 +11,7 @@ import (
 
 type Operations struct {
 	external.Account
+	Receipts bool
 }
 
 func (o Operations) Name() string {
@@ -36,26 +33,14 @@ func (o Operations) Run(ctx context.Context, sync *tinkoff.Sync) (int, error) {
 		return 0, errors.Wrap(err, "get")
 	}
 
-	for i, operation := range operations {
-		if operation.HasShoppingReceipt {
-			if err := (backoff.Retry{
-				Body: func(ctx context.Context) error {
-					receipt, err := sync.ShoppingReceipt(ctx, operation.ID)
-					switch {
-					case err == nil:
-						operations[i].ShoppingReceipt = receipt
-						return nil
-					case strings.Contains(err.Error(), "REQUEST_RATE_LIMIT_EXCEEDED"):
-						return err
-					default:
-						sync.Report.Bold("\nReceipt %d • ", operation.ID).Text(err.Error())
-						return nil
-					}
-				},
-				Retries: 3,
-				Backoff: backoff.Exp{Base: 2 * int64(time.Second), Power: 1},
-			}).Do(ctx); err != nil {
-				return 0, errors.Wrapf(err, "get receipt %d", operation.ID)
+	if o.Receipts {
+		for _, operation := range operations {
+			if operation.HasShoppingReceipt {
+				if receipt, err := sync.ShoppingReceipt(ctx, operation.ID); err != nil {
+					sync.Report.Bold("\nShopping receipt %d • ", operation.ID).Text("%v", err)
+				} else {
+					operation.ShoppingReceipt = receipt
+				}
 			}
 		}
 	}

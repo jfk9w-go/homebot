@@ -4,21 +4,14 @@ import (
 	"context"
 
 	"github.com/jfk9w-go/flu"
-	telegram "github.com/jfk9w-go/telegram-bot-api"
 	"github.com/jfk9w-go/telegram-bot-api/ext/tapp"
 	"github.com/pkg/errors"
 )
 
-type Extension []Executor
+type Extension func(receipts bool) []Executor
 
-func (e Extension) ID() string {
+func (Extension) ID() string {
 	return "tinkoff"
-}
-
-func (e Extension) Buttons() []telegram.Button {
-	return []telegram.Button{
-		(&telegram.Command{Key: "/tsync"}).Button("Update bank data"),
-	}
 }
 
 func (e Extension) Apply(ctx context.Context, app tapp.Application) (interface{}, error) {
@@ -28,6 +21,7 @@ func (e Extension) Apply(ctx context.Context, app tapp.Application) (interface{}
 			Database string
 			Data     flu.File
 			Reload   flu.Duration
+			Receipts bool
 		}
 	})
 
@@ -61,6 +55,6 @@ func (e Extension) Apply(ctx context.Context, app tapp.Application) (interface{}
 		},
 		Clock:       app,
 		Credentials: creds,
-		Executors:   e,
+		Executors:   e(config.Receipts),
 	}, nil
 }

@@ -9,15 +9,15 @@ import (
 	"github.com/pkg/errors"
 )
 
-var Accounts tinkoff.Executor = accounts{}
+type Accounts struct {
+	Receipts bool
+}
 
-type accounts struct{}
-
-func (accounts) Name() string {
+func (Accounts) Name() string {
 	return "Accounts"
 }
 
-func (accounts) Run(ctx context.Context, sync *tinkoff.Sync) (int, error) {
+func (a Accounts) Run(ctx context.Context, sync *tinkoff.Sync) (int, error) {
 	accounts, err := sync.Accounts(ctx)
 	if err != nil {
 		return 0, errors.Wrap(err, "get accounts")
@@ -42,7 +42,7 @@ func (accounts) Run(ctx context.Context, sync *tinkoff.Sync) (int, error) {
 		return 0, errors.Wrap(err, "update")
 	} else {
 		for _, account := range importantAccounts {
-			if err := sync.Run(ctx, Operations{account}); err != nil {
+			if err := sync.Run(ctx, Operations{Account: account, Receipts: a.Receipts}); err != nil {
 				return 0, err
 			}
 		}

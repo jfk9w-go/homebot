@@ -1,12 +1,8 @@
 package external
 
 import (
-	"encoding/json"
-	"io"
 	"strings"
 	"time"
-
-	"github.com/jfk9w-go/flu"
 )
 
 var (
@@ -27,34 +23,6 @@ var (
 	TradingOperationsStart = time.Date(2015, 1, 1, 0, 0, 0, 0, time.UTC)
 	origin                 = "web,ib5,platform"
 )
-
-type Response struct {
-	ResultCode      string          `json:"resultCode"`
-	Status          string          `json:"status"`
-	Payload         json.RawMessage `json:"payload"`
-	OperationTicket string          `json:"operationTicket"`
-}
-
-func (r *Response) DecodeFrom(reader io.Reader) error {
-	return flu.DecodeFrom(flu.IO{R: reader}, flu.JSON(r))
-}
-
-func (r *Response) Unmarshal(ecode string, value interface{}) error {
-	code := r.ResultCode
-	if code == "" {
-		code = r.Status
-	}
-
-	if !strings.EqualFold(code, ecode) {
-		return ResultCodeError(code)
-	}
-
-	if value == nil {
-		return nil
-	}
-
-	return json.Unmarshal(r.Payload, value)
-}
 
 type ResultCodeError string
 

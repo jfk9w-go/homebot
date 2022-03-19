@@ -2,12 +2,15 @@ package external
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/jfk9w-go/flu"
 	"github.com/jfk9w-go/flu/httpf"
@@ -25,29 +28,33 @@ type ClientConfig struct {
 type Client struct {
 	httpf.Client
 	username string
+	limiter  flu.RateLimiter
 }
 
 func NewClient(ctx context.Context, username string) (*Client, error) {
-	var r Response
-	if err := httpf.GET(SessionEndpoint).
-		Query("origin", origin).
-		Exchange(ctx, nil).
-		DecodeBody(&r).
-		Error(); err != nil {
-		return nil, errors.Wrap(err, "init session")
+	httpClient := &http.Client{
+		Transport: httpf.NewDefaultTransport(),
 	}
 
-	var sessionID string
-	if err := r.Unmarshal("OK", &sessionID); err != nil {
-		return nil, errors.Wrap(err, "init session")
-	}
-
-	return &Client{
-		Client: &http.Client{
-			Transport: withQueryParams(httpf.NewDefaultTransport(), sessionID),
-		},
+	c := &Client{
+		Client:   httpClient,
 		username: username,
-	}, nil
+		limiter:  flu.IntervalRateLimiter(time.Second),
+	}
+
+	var (
+		req = httpf.GET(SessionEndpoint).
+			Query("origin", origin)
+
+		sessionID string
+	)
+
+	if _, err := c.exchange(ctx, req, "OK", &sessionID); err != nil {
+		return nil, errors.Wrap(err, "init session")
+	}
+
+	httpClient.Transport = withQueryParams(httpClient.Transport, sessionID)
+	return c, nil
 }
 
 func Authorize(ctx context.Context, cred Credential, confirm Confirm) (*Client, error) {
@@ -86,35 +93,27 @@ func (c *Client) Username() string {
 }
 
 func (c *Client) SignUp(ctx context.Context, expectedStatusCode string, body flu.EncoderTo) (string, error) {
-	var r Response
-	if err := httpf.POST(SignUpEndpoint, body).
-		Exchange(ctx, c).
-		DecodeBody(&r).
-		Error(); err != nil {
-		return "", err
+	req := httpf.POST(SignUpEndpoint, body)
+	operationTicket, err := c.exchange(ctx, req, expectedStatusCode, nil)
+	if err != nil {
+		return "", errors.Wrap(err, "exchange")
 	}
 
-	if err := r.Unmarshal(expectedStatusCode, nil); err != nil {
-		return "", err
-	}
-
-	return r.OperationTicket, nil
+	return operationTicket, nil
 }
 
 func (c *Client) Confirm(ctx context.Context, initialOperationTicket, initialOperation, code string) error {
-	var r Response
-	if err := httpf.POST(ConfirmEndpoint,
+	req := httpf.POST(ConfirmEndpoint,
 		new(httpf.Form).
 			Set("initialOperationTicket", initialOperationTicket).
 			Set("initialOperation", initialOperation).
-			Set("confirmationData", fmt.Sprintf(`{"SMSBYID":"%s"}`, code))).
-		Exchange(ctx, c).
-		DecodeBody(&r).
-		Error(); err != nil {
-		return err
+			Set("confirmationData", fmt.Sprintf(`{"SMSBYID":"%s"}`, code)))
+
+	if _, err := c.exchange(ctx, req, "OK", nil); err != nil {
+		return errors.Wrap(err, "exchange")
 	}
 
-	return r.Unmarshal("OK", nil)
+	return nil
 }
 
 func (c *Client) LevelUp(ctx context.Context) error {
@@ -124,26 +123,23 @@ func (c *Client) LevelUp(ctx context.Context) error {
 }
 
 func (c *Client) Accounts(ctx context.Context) ([]Account, error) {
-	var r Response
-	if err := httpf.POST(GroupedRequestsEndpount,
-		new(httpf.Form).
-			Set("requestsData", `[{"key":0,"operation":"accounts_flat"}]`)).
-		Query("_methods", "accounts_flat").
-		Exchange(ctx, c).
-		DecodeBody(&r).
-		Error(); err != nil {
-		return nil, err
+	var (
+		req = httpf.POST(GroupedRequestsEndpount,
+			new(httpf.Form).
+				Set("requestsData", `[{"key":0,"operation":"accounts_flat"}]`)).
+			Query("_methods", "accounts_flat")
+
+		resp map[string]response
+	)
+
+	if _, err := c.exchange(ctx, req, "OK", &resp); err != nil {
+		return nil, errors.Wrap(err, "exchange")
 	}
 
-	rs := make(map[string]Response)
-	if err := r.Unmarshal("OK", &rs); err != nil {
-		return nil, errors.Wrap(err, "decode responses")
-	}
-
-	accounts := make([]Account, 0)
-	for _, r := range rs {
+	accounts := make([]Account, 0, len(resp))
+	for _, r := range resp {
 		as := make([]Account, 0)
-		if err := r.Unmarshal("OK", &as); err != nil {
+		if err := json.Unmarshal(r.Payload, &as); err != nil {
 			return nil, errors.Wrap(err, "decode accounts")
 		}
 
@@ -154,44 +150,44 @@ func (c *Client) Accounts(ctx context.Context) ([]Account, error) {
 }
 
 func (c *Client) Operations(ctx context.Context, now time.Time, accountID string, since time.Time) ([]Operation, error) {
-	formatTime := func(t time.Time) string { return strconv.FormatInt(t.UnixNano()/1e6, 10) }
-	var r Response
-	if err := httpf.GET(OperationsEndpoint).
-		Query("account", accountID).
-		Query("start", formatTime(since)).
-		Query("end", formatTime(now)).
-		Exchange(ctx, c).
-		DecodeBody(&r).
-		Error(); err != nil {
-		return nil, err
+	var (
+		formatTime = func(t time.Time) string {
+			return strconv.FormatInt(t.UnixNano()/1e6, 10)
+		}
+
+		req = httpf.GET(OperationsEndpoint).
+			Query("account", accountID).
+			Query("start", formatTime(since)).
+			Query("end", formatTime(now))
+
+		resp = make([]Operation, 0)
+	)
+
+	if _, err := c.exchange(ctx, req, "OK", &resp); err != nil {
+		return nil, errors.Wrap(err, "exchange")
 	}
 
-	os := make([]Operation, 0)
-	if err := r.Unmarshal("OK", &os); err != nil {
-		return nil, err
-	}
-
-	sort.Sort(Operations(os))
-	return os, nil
+	sort.Sort(Operations(resp))
+	return resp, nil
 }
 
 func (c *Client) ShoppingReceipt(ctx context.Context, operationID uint64) (*ShoppingReceipt, error) {
-	var r Response
-	if err := httpf.GET(ShoppingReceiptEndpount).
-		Query("operationId", strconv.FormatUint(operationID, 10)).
-		Exchange(ctx, c).
-		DecodeBody(&r).
-		Error(); err != nil {
-		return nil, err
-	}
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
 
-	receipt := new(ShoppingReceipt)
-	if err := r.Unmarshal("OK", receipt); err != nil {
+	var (
+		req = httpf.GET(ShoppingReceiptEndpount).
+			Query("operationId", strconv.FormatUint(operationID, 10))
+
+		resp ShoppingReceipt
+	)
+
+	if _, err := c.exchange(ctx, req, "OK", &resp); err != nil {
 		if err, ok := err.(ResultCodeError); ok && err == "NO_DATA_FOUND" {
 			return nil, nil
 		}
 
-		return nil, err
+		return nil, errors.Wrap(err, "exchange")
 	}
 
 	type itemKey struct {
@@ -200,7 +196,7 @@ func (c *Client) ShoppingReceipt(ctx context.Context, operationID uint64) (*Shop
 	}
 
 	itemsByPrimaryKey := make(map[itemKey]ShoppingReceiptItem)
-	for _, item := range receipt.Receipt.Items {
+	for _, item := range resp.Receipt.Items {
 		key := itemKey{item.Name, item.Price}
 		if previous, ok := itemsByPrimaryKey[key]; ok {
 			item.Quantity += previous.Quantity
@@ -217,8 +213,8 @@ func (c *Client) ShoppingReceipt(ctx context.Context, operationID uint64) (*Shop
 		i++
 	}
 
-	receipt.Receipt.Items = items
-	return receipt, nil
+	resp.Receipt.Items = items
+	return &resp, nil
 }
 
 func formatTime(t time.Time) string {
@@ -230,60 +226,50 @@ func formatTime(t time.Time) string {
 }
 
 func (c *Client) TradingOperations(ctx context.Context, now time.Time, since time.Time) ([]TradingOperation, error) {
-	var r Response
-	if err := httpf.POST(TradingOperationsEndpoint,
-		flu.JSON(map[string]interface{}{
+	var (
+		req = httpf.POST(TradingOperationsEndpoint, flu.JSON(object{
 			"from":               formatTime(since),
 			"to":                 formatTime(now),
 			"overnightsDisabled": false,
-		})).
-		Exchange(ctx, c).
-		DecodeBody(&r).
-		Error(); err != nil {
-		return nil, err
+		}))
+
+		resp struct {
+			Items []TradingOperation `json:"items"`
+		}
+	)
+
+	if _, err := c.exchange(ctx, req, "OK", &resp); err != nil {
+		return nil, errors.Wrap(err, "exchange")
 	}
 
-	var w struct {
-		Items []TradingOperation `json:"items"`
+	for i := range resp.Items {
+		resp.Items[i].Username = c.username
 	}
 
-	if err := r.Unmarshal("OK", &w); err != nil {
-		return nil, err
-	}
-
-	for i := range w.Items {
-		w.Items[i].Username = c.username
-	}
-
-	return w.Items, nil
+	return resp.Items, nil
 }
 
 func (c *Client) PurchasedSecurities(ctx context.Context, now time.Time) ([]PurchasedSecurity, error) {
-	var r Response
-	if err := httpf.POST(PurchasedSecuritiesEndpoint,
-		flu.JSON(map[string]interface{}{
+	var (
+		req = httpf.POST(PurchasedSecuritiesEndpoint, flu.JSON(object{
 			"brokerAccountType": "Tinkoff",
 			"currency":          "RUB",
-		})).
-		Exchange(ctx, c).
-		DecodeBody(&r).
-		Error(); err != nil {
-		return nil, err
+		}))
+
+		resp struct {
+			Data []PurchasedSecurity `json:"data"`
+		}
+	)
+
+	if _, err := c.exchange(ctx, req, "OK", &resp); err != nil {
+		return nil, errors.Wrap(err, "exchange")
 	}
 
-	var securities struct {
-		Data []PurchasedSecurity `json:"data"`
+	for i := range resp.Data {
+		resp.Data[i].Time = now
 	}
 
-	if err := r.Unmarshal("OK", &securities); err != nil {
-		return nil, err
-	}
-
-	for i := range securities.Data {
-		securities.Data[i].Time = now
-	}
-
-	return securities.Data, nil
+	return resp.Data, nil
 }
 
 const MaxCandlePeriod = 12 * 30 * 24 * time.Hour // 1 year
@@ -291,34 +277,26 @@ const MaxCandlePeriod = 12 * 30 * 24 * time.Hour // 1 year
 func (c *Client) Candles(ctx context.Context, ticker string, resolution interface{}, start, end time.Time) ([]Candle, error) {
 	candles := make([]Candle, 0)
 	for {
-		var (
-			localEnd = end
-			r        Response
-		)
-
+		var localEnd = end
 		if end.Sub(start) > MaxCandlePeriod {
 			localEnd = start.Add(MaxCandlePeriod)
 		}
 
-		if err := httpf.POST(CandlesEndpoint,
-			flu.JSON(map[string]interface{}{
+		var (
+			req = httpf.POST(CandlesEndpoint, flu.JSON(object{
 				"from":       formatTime(start),
 				"to":         formatTime(localEnd),
 				"ticker":     ticker,
 				"resolution": resolution,
-			})).
-			Exchange(ctx, c).
-			DecodeBody(&r).
-			Error(); err != nil {
-			return nil, err
-		}
+			}))
 
-		var resp struct {
-			Candles []Candle `json:"candles"`
-		}
+			resp struct {
+				Candles []Candle `json:"candles"`
+			}
+		)
 
-		if err := r.Unmarshal("Ok", &resp); err != nil {
-			return nil, err
+		if _, err := c.exchange(ctx, req, "OK", &resp); err != nil {
+			return nil, errors.Wrap(err, "exchange")
 		}
 
 		for i := range resp.Candles {
@@ -334,6 +312,69 @@ func (c *Client) Candles(ctx context.Context, ticker string, resolution interfac
 	}
 
 	return candles, nil
+}
+
+func (c *Client) exchange(ctx context.Context, req *httpf.RequestBuilder, expectedStatus string, result interface{}) (string, error) {
+	if err := c.limiter.Start(ctx); err != nil {
+		return "", err
+	}
+
+	defer c.limiter.Complete()
+	return c.exchange0(ctx, req, expectedStatus, result)
+}
+
+func (c *Client) exchange0(ctx context.Context, req *httpf.RequestBuilder, expectedStatus string, result interface{}) (string, error) {
+	var (
+		resp response
+		log  = c.log().WithFields(logrus.Fields{
+			"method": req.Request.Method,
+			"url":    req.URL.String(),
+		})
+	)
+
+	if err := req.Exchange(ctx, c).DecodeBody(flu.JSON(&resp)).Error(); err != nil {
+		return "", err
+	}
+
+	status := resp.ResultCode
+	if status == "" {
+		status = resp.Status
+	}
+
+	switch strings.ToUpper(status) {
+	case expectedStatus:
+		if result != nil {
+			if err := json.Unmarshal(resp.Payload, result); err != nil {
+				return "", errors.Wrap(err, "unmarshal payload")
+			}
+		}
+
+		log.Debugf("exchange ok")
+		return resp.OperationTicket, nil
+	case "REQUEST_RATE_LIMIT_EXCEEDED":
+		log.Warnf("rate limit exceeded, retrying exchange")
+		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
+		case <-time.After(10 * time.Second):
+			return c.exchange0(ctx, req, expectedStatus, result)
+		}
+	default:
+		return "", ResultCodeError(status)
+	}
+}
+
+func (c *Client) log() *logrus.Entry {
+	return logrus.WithField("client", "tinkoff")
+}
+
+type object map[string]interface{}
+
+type response struct {
+	ResultCode      string          `json:"resultCode"`
+	Status          string          `json:"status"`
+	Payload         json.RawMessage `json:"payload"`
+	OperationTicket string          `json:"operationTicket"`
 }
 
 func withQueryParams(rt http.RoundTripper, sessionID string) httpf.RoundTripperFunc {

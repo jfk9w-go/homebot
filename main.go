@@ -21,7 +21,14 @@ func main() {
 	app := Instance{tapp.Create(GitCommit, flu.DefaultClock)}
 	defer flu.CloseQuietly(app)
 	app.ApplyExtensions(
-		tinkoff.Extension{sync.Accounts, sync.TradingOperations, sync.PurchasedSecurities, sync.Candles},
+		tinkoff.Extension(func(receipts bool) []tinkoff.Executor {
+			return []tinkoff.Executor{
+				sync.Accounts{Receipts: receipts},
+				sync.TradingOperations,
+				sync.PurchasedSecurities,
+				sync.Candles,
+			}
+		}),
 		hassgpx.Extension,
 	)
 
