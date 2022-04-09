@@ -5,17 +5,24 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
 	"github.com/jfk9w-go/flu"
 	"github.com/jfk9w-go/flu/httpf"
+	"github.com/jfk9w-go/flu/logf"
+	"github.com/jfk9w-go/flu/syncf"
 	"github.com/pkg/errors"
 )
+
+type Credential struct {
+	Username string `yaml:"username" doc:"Username is used for operation distinction."`
+	Phone    string `yaml:"phone" doc:"Phone is required to login."`
+	Password string `yaml:"password" doc:"Password is required to login."`
+}
+
+const rootLoggerName = "tinkoff"
 
 type Confirm func(ctx context.Context) (code string, err error)
 
@@ -28,7 +35,7 @@ type ClientConfig struct {
 type Client struct {
 	httpf.Client
 	username string
-	limiter  flu.RateLimiter
+	limiter  syncf.Locker
 }
 
 func NewClient(ctx context.Context, username string) (*Client, error) {
@@ -39,7 +46,7 @@ func NewClient(ctx context.Context, username string) (*Client, error) {
 	c := &Client{
 		Client:   httpClient,
 		username: username,
-		limiter:  flu.IntervalRateLimiter(time.Second),
+		limiter:  syncf.Unlock,
 	}
 
 	var (
@@ -90,6 +97,10 @@ func Authorize(ctx context.Context, cred Credential, confirm Confirm) (*Client, 
 
 func (c *Client) Username() string {
 	return c.username
+}
+
+func (c *Client) String() string {
+	return rootLoggerName + "." + c.username
 }
 
 func (c *Client) SignUp(ctx context.Context, expectedStatusCode string, body flu.EncoderTo) (string, error) {
@@ -167,7 +178,6 @@ func (c *Client) Operations(ctx context.Context, now time.Time, accountID string
 		return nil, errors.Wrap(err, "exchange")
 	}
 
-	sort.Sort(Operations(resp))
 	return resp, nil
 }
 
@@ -315,23 +325,20 @@ func (c *Client) Candles(ctx context.Context, ticker string, resolution interfac
 }
 
 func (c *Client) exchange(ctx context.Context, req *httpf.RequestBuilder, expectedStatus string, result interface{}) (string, error) {
-	if err := c.limiter.Start(ctx); err != nil {
-		return "", err
+	ctx, cancel := c.limiter.Lock(ctx)
+	if ctx.Err() != nil {
+		return "", ctx.Err()
+	} else {
+		defer cancel()
 	}
 
-	defer c.limiter.Complete()
-	return c.exchange0(ctx, req, expectedStatus, result)
+	ticketID, err := c.exchange0(ctx, req, expectedStatus, result)
+	logf.Get(c).Resultf(ctx, logf.Trace, logf.Warn, "%s (%v)", req, err)
+	return ticketID, err
 }
 
 func (c *Client) exchange0(ctx context.Context, req *httpf.RequestBuilder, expectedStatus string, result interface{}) (string, error) {
-	var (
-		resp response
-		log  = c.log().WithFields(logrus.Fields{
-			"method": req.Request.Method,
-			"url":    req.URL.String(),
-		})
-	)
-
+	var resp response
 	if err := req.Exchange(ctx, c).DecodeBody(flu.JSON(&resp)).Error(); err != nil {
 		return "", err
 	}
@@ -349,10 +356,9 @@ func (c *Client) exchange0(ctx context.Context, req *httpf.RequestBuilder, expec
 			}
 		}
 
-		log.Debugf("exchange ok")
 		return resp.OperationTicket, nil
 	case "REQUEST_RATE_LIMIT_EXCEEDED":
-		log.Warnf("rate limit exceeded, retrying exchange")
+		logf.Get(c).Warnf(ctx, "rate limit exceeded, retrying exchange")
 		select {
 		case <-ctx.Done():
 			return "", ctx.Err()
@@ -362,10 +368,6 @@ func (c *Client) exchange0(ctx context.Context, req *httpf.RequestBuilder, expec
 	default:
 		return "", ResultCodeError(status)
 	}
-}
-
-func (c *Client) log() *logrus.Entry {
-	return logrus.WithField("client", "tinkoff")
 }
 
 type object map[string]interface{}

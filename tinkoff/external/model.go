@@ -7,10 +7,6 @@ import (
 	"gopkg.in/guregu/null.v3"
 )
 
-type Credential struct {
-	Username, Phone, Password string
-}
-
 //
 // Operation
 //
@@ -32,7 +28,8 @@ func (t *OperationTime) UnmarshalJSON(data []byte) error {
 		return err
 	}
 
-	*t = OperationTime(time.Unix(s.Milliseconds/1e3, 0).In(MoscowLocation))
+	value := time.Unix(s.Milliseconds/1e3, 0).In(MoscowLocation)
+	*t = OperationTime(value)
 	return nil
 }
 
