@@ -42,7 +42,7 @@ const Description = `
                              Also see 'hassgpx' configuration secion for more info.
 `
 
-var Version = "dev"
+var GitCommit = "dev"
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
@@ -50,7 +50,7 @@ func main() {
 
 	app := apfel.Boot[Config]{
 		Name:    "homebot",
-		Version: Version,
+		Version: GitCommit,
 		Desc:    Description,
 	}.App(ctx)
 	defer flu.CloseQuietly(app)
