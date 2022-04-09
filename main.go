@@ -42,13 +42,16 @@ const Description = `
                              Also see 'hassgpx' configuration secion for more info.
 `
 
+var Version = "dev"
+
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	app := apfel.Boot[Config]{
-		Name: "homebot",
-		Desc: Description,
+		Name:    "homebot",
+		Version: Version,
+		Desc:    Description,
 	}.App(ctx)
 	defer flu.CloseQuietly(app)
 

@@ -3,8 +3,8 @@ module homebot
 go 1.18
 
 require (
-	github.com/jfk9w-go/flu v0.10.5
-	github.com/jfk9w-go/telegram-bot-api v0.10.6
+	github.com/jfk9w-go/flu v0.10.7
+	github.com/jfk9w-go/telegram-bot-api v0.10.8
 	github.com/pkg/errors v0.9.1
 	gopkg.in/guregu/null.v3 v3.5.0
 	gorm.io/driver/postgres v1.3.4
