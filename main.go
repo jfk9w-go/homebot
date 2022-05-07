@@ -39,7 +39,7 @@ const Description = `
     /get_gpx_track         – collects Home Assistant tracking data from its database (only postgres supported)
                              in GPX format.
                              This uses some bold assumptions and rough approximations, you may want to check the code.
-                             Also see 'hassgpx' configuration secion for more info.
+                             Also see 'hassgpx' configuration section for more info.
 `
 
 var GitCommit = "dev"
