@@ -1,0 +1,288 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": 12,
+  "iteration": 1652857927504,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "pg_finance"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 0,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "auto",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "transparent",
+                "value": null
+              },
+              {
+                "color": "#5f5f5c",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 5,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "pg_finance"
+          },
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "queryType": "randomWalk",
+          "rawQuery": true,
+          "rawSql": "with t as (select tp.currency,\n                  to_timestamp(sum(extract(epoch from buy_time) * quantity) / sum(quantity)) as buy_time,\n                  sum(buy_price * quantity) / sum(quantity)                                  as buy_price,\n                  sum(quantity)                                                              as quantity,\n                  date                                                                       as time,\n                  sum(close * quantity) / sum(quantity)                                      as price\n           from candles c\n                    inner join trading_positions tp\n                               on c.ticker = tp.ticker\n                                   and c.date >= buy_time\n                                   and (tp.sell_time is null or c.date < tp.sell_time)\n           where tp.ticker || ' / ' || tp.currency || ' / ' || tp.username in ([[tickers]])\n             and tp.buy_time is not null\n           group by tp.currency, time)\nselect currency,\n       time,\n       ((0.997 * price - 0.13 * case when price - buy_price > 0 then price - buy_price else 0 end) / (1.003 * buy_price) - 1) /\n       greatest(31536000, (extract(epoch from time) - extract(epoch from buy_time))) * 31536000 as yearly\nfrom t\norder by time",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "title": "Portfolio yield",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "pg_finance"
+      },
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "displayMode": "auto",
+            "filterable": true,
+            "minWidth": 50
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "red",
+                "value": null
+              },
+              {
+                "color": "purple",
+                "value": 0
+              }
+            ]
+          },
+          "unit": "percentunit"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "profit"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "none"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 12,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 3,
+      "options": {
+        "footer": {
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true
+      },
+      "pluginVersion": "8.4.7",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "pg_finance"
+          },
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "queryType": "randomWalk",
+          "rawQuery": true,
+          "rawSql": "with t as (select ticker,\n                  currency,\n                  quantity,\n                  extract(epoch from buy_time) as buy_time,\n                  buy_price,\n                  sell_time                    as time,\n                  sell_price\n           from trading_positions\n           where sell_time is not null\n             and currency is not null),\n     u as (select ticker,\n                  currency,\n                  time,\n                  quantity,\n                  (extract(epoch from time) - buy_time) / 31536000                                                          as yearly_c,\n                  (0.997 * sell_price - 0.13 * case when sell_price - buy_price > 0 then sell_price - buy_price else 0 end) as sell,\n                  (1.003 * buy_price)                                                                                       as buy\n           from t)\nselect to_char(time, 'YYYY-MM-DD') as \"date\",\n       ticker,\n       currency,\n       (sell - buy) * quantity     as profit,\n       (sell / buy - 1)            as pct,\n       (sell / buy - 1) * yearly_c as yearly\nfrom u\norder by time desc",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "title": "Yield",
+      "type": "table"
+    }
+  ],
+  "refresh": false,
+  "schemaVersion": 35,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "pg_finance"
+        },
+        "definition": "select distinct (ticker || ' / ' || currency || ' / ' || username) from  trading_positions order by 1",
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "name": "tickers",
+        "options": [],
+        "query": "select distinct (ticker || ' / ' || currency || ' / ' || username) from  trading_positions order by 1",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-2y",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Investments",
+  "uid": "rlUlrI77k",
+  "version": 30,
+  "weekStart": ""
+}

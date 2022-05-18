@@ -1,0 +1,800 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 2,
+  "id": 5,
+  "iteration": 1652857879446,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "pg_finance"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "right",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 0,
+            "pointSize": 6,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "line"
+            }
+          },
+          "links": [
+            {
+              "title": "",
+              "url": "https://graf.sonc.top/d/uGiQ1BuMz/expense-categories?orgId=1&var-category=${__data.fields.category}"
+            }
+          ],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "currencyRUB"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "pir"
+            },
+            "properties": [
+              {
+                "id": "custom.axisPlacement",
+                "value": "left"
+              },
+              {
+                "id": "unit",
+                "value": "percentunit"
+              },
+              {
+                "id": "custom.lineStyle"
+              },
+              {
+                "id": "custom.showPoints",
+                "value": "always"
+              },
+              {
+                "id": "custom.drawStyle",
+                "value": "line"
+              },
+              {
+                "id": "custom.fillOpacity",
+                "value": 0
+              },
+              {
+                "id": "custom.lineWidth",
+                "value": 1
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "text",
+                      "value": null
+                    },
+                    {
+                      "color": "green",
+                      "value": 0
+                    }
+                  ]
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 12,
+        "x": 0,
+        "y": 0
+      },
+      "id": 6,
+      "links": [],
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "8.0.6",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "pg_finance"
+          },
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "queryType": "randomWalk",
+          "rawQuery": true,
+          "rawSql": "with s as (select distinct on (id, time) id, time, account_amount\n           from debit d\n           left join shopping_receipt_items i on d.id = i.shopping_receipt_id\n           where category in ([[category]])\n             and merchant_name in ([[merchant]])\n             and (i.name in ([[receipt_item]]) or '__all__' in ([[receipt_item]]))),\n     t as (select date_trunc('month', time) as time,\n                  sum(account_amount)       as amount\n           from s\n           group by 1\n           order by 1),\n     u as (select time, amount, avg(amount) over (order by time rows between [[pir_months]] preceding and 1 preceding) as avg_amount from t)\nselect time, (amount - avg_amount) / avg_amount as pir\nfrom u\nwhere time >= $__timeFrom()::timestamp - '1 month'::interval and time < $__timeTo()",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        },
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "pg_finance"
+          },
+          "format": "time_series",
+          "group": [],
+          "hide": false,
+          "metricColumn": "none",
+          "rawQuery": true,
+          "rawSql": "with s as (select distinct on (id, time) id, time, account_amount\n           from debit d\n           left join shopping_receipt_items i on d.id = i.shopping_receipt_id\n           where category in ([[category]])\n             and merchant_name in ([[merchant]])\n             and (i.name in ([[receipt_item]]) or '__all__' in ([[receipt_item]]))),\n     t as (select date_trunc('month', time) as time,\n                  sum(account_amount)       as amount\n           from s\n           group by 1\n           order by 1),\n     u as (select time, amount, avg(amount) over (order by time rows between [[pir_months]] preceding and 1 preceding) as avg_amount from t)\nselect time, amount, avg_amount\nfrom u\nwhere time >= $__timeFrom()::timestamp - '1 month'::interval and time < $__timeTo()",
+          "refId": "B",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "title": "Inflation rate over past [[pir_months]] months",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "pg_finance"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisLabel": "",
+            "axisPlacement": "right",
+            "barAlignment": 0,
+            "drawStyle": "bars",
+            "fillOpacity": 100,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": true,
+            "stacking": {
+              "group": "A",
+              "mode": "normal"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          },
+          "unit": "currencyRUB"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 11,
+        "w": 12,
+        "x": 12,
+        "y": 0
+      },
+      "id": 8,
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "hidden",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "pluginVersion": "8.0.6",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "pg_finance"
+          },
+          "format": "time_series",
+          "group": [],
+          "metricColumn": "none",
+          "queryType": "randomWalk",
+          "rawQuery": true,
+          "rawSql": "with s as (select distinct on (id, time) id, time, category, account_amount\n           from debit d\n           left join shopping_receipt_items i on d.id = i.shopping_receipt_id\n           where category in ([[category]])\n             and merchant_name in ([[merchant]])\n             and (i.name in ([[receipt_item]]) or '__all__' in ([[receipt_item]])))\nselect date_trunc('month', time) as time, category, sum(account_amount) as amount\nfrom s\ngroup by 1, 2\norder by 1, 3 desc",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "title": "Expenses",
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "pg_finance"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "displayMode": "color-text",
+            "filterable": false,
+            "minWidth": 30
+          },
+          "decimals": 2,
+          "links": [
+            {
+              "title": "",
+              "url": "https://graf.sonc.top/d/uGiQ1BuMz/expense-categories?orgId=1&var-category=${__data.fields.category}﻿&${pir_months:queryparam}&${merchant:queryparam}&${receipt_item:queryparam}"
+            }
+          ],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "rgb(209, 209, 209)",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "category"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 242
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 0,
+        "y": 11
+      },
+      "id": 10,
+      "links": [],
+      "options": {
+        "footer": {
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "8.4.7",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "pg_finance"
+          },
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "queryType": "randomWalk",
+          "rawQuery": true,
+          "rawSql": "with s as (select distinct on (id, time) id, time, category, account_amount\n           from debit d\n           left join shopping_receipt_items i on d.id = i.shopping_receipt_id\n           where category in ([[category]])\n             and merchant_name in ([[merchant]])\n             and (i.name in ([[receipt_item]]) or '__all__' in ([[receipt_item]]))),\n     t as (select date_trunc('month', time) as time,\n                  category,\n                  sum(account_amount)       as amount\n           from s\n           group by 1, 2\n           order by 2, 1),\n     prev as (select *\n              from t\n              where date_trunc('month', time) = date_trunc('month', now() - (case when date_part('day', now()) >= 15 then '1 month' else '2 months' end)::interval)),\n     curr as (select *\n              from t\n              where date_trunc('month', time) = date_trunc('month', now() - (case when date_part('day', now()) >= 15 then '0' else '1 month' end)::interval)),\n     cmp as (select coalesce(prev.category, curr.category) as category,\n                    coalesce(prev.amount, 0)               as prev_amount,\n                    coalesce(curr.amount, 0)               as curr_amount\n             from prev\n                      full join curr on prev.category = curr.category)\nselect 'All' as category, sum(prev_amount) as last_month, sum(curr_amount) as curr_month\nfrom cmp\nunion all\n(select category, prev_amount as last_month, curr_amount as curr_month\n from cmp\n order by curr_amount desc, prev_amount desc)",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "title": "Categories",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "pg_finance"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "displayMode": "color-text",
+            "filterable": false,
+            "minWidth": 30
+          },
+          "decimals": 2,
+          "links": [
+            {
+              "title": "",
+              "url": "https://graf.sonc.top/d/uGiQ1BuMz/expense-categories?orgId=1&var-merchant=${__data.fields.merchant_name}﻿&${pir_months:queryparam}&${category:queryparam}&${receipt_item:queryparam}"
+            }
+          ],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "rgb(209, 209, 209)",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "merchant_name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 183
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 8,
+        "y": 11
+      },
+      "id": 11,
+      "links": [],
+      "options": {
+        "footer": {
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "8.4.7",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "pg_finance"
+          },
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "queryType": "randomWalk",
+          "rawQuery": true,
+          "rawSql": "with s as (select distinct on (id, time) id, time, coalesce(merchant_name, description) as merchant_name, account_amount\n           from debit d\n           left join shopping_receipt_items i on d.id = i.shopping_receipt_id\n           where category in ([[category]])\n             and merchant_name in ([[merchant]])\n             and (i.name in ([[receipt_item]]) or '__all__' in ([[receipt_item]]))),\n     t as (select date_trunc('month', time) as time,\n                  merchant_name,\n                  sum(account_amount)       as amount,\n                  avg(account_amount)       as avg_amount\n           from s\n           group by 1, 2\n           order by 2, 1),\n     prev as (select *\n              from t\n              where date_trunc('month', time) = date_trunc('month', now() - (case when date_part('day', now()) >= 15 then '1 month' else '2 months' end)::interval)),\n     curr as (select *\n              from t\n              where date_trunc('month', time) = date_trunc('month', now() - (case when date_part('day', now()) >= 15 then '0' else '1 month' end)::interval)),\n     cmp as (select coalesce(prev.merchant_name, curr.merchant_name) as merchant_name,\n                    coalesce(prev.amount, 0)                         as prev_amount,\n                    coalesce(curr.amount, 0)                         as curr_amount,\n                    curr.avg_amount                                  as avg_amount\n             from prev\n                      full join curr on prev.merchant_name = curr.merchant_name)\nselect 'All' as merchant_name, sum(prev_amount) as \"last\", sum(curr_amount) as \"curr\", avg(avg_amount) as \"avg\"\nfrom cmp\nunion all\n(select merchant_name, prev_amount as \"last\", curr_amount as \"curr\", avg_amount as \"avg\"\n from cmp\n order by curr_amount desc, prev_amount desc)",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "title": "Merchants",
+      "type": "table"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "pg_finance"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "align": "auto",
+            "displayMode": "color-text",
+            "filterable": false,
+            "minWidth": 30
+          },
+          "decimals": 2,
+          "links": [
+            {
+              "title": "",
+              "url": "https://graf.sonc.top/d/uGiQ1BuMz/expense-categories?orgId=1&var-receipt_item=${__data.fields.item_name}﻿&${pir_months:queryparam}&${category:queryparam}&${merchant:queryparam}"
+            }
+          ],
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "rgb(209, 209, 209)",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "item_name"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 192
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 8,
+        "x": 16,
+        "y": 11
+      },
+      "id": 12,
+      "links": [],
+      "options": {
+        "footer": {
+          "fields": "",
+          "reducer": [
+            "sum"
+          ],
+          "show": false
+        },
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "8.4.7",
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "pg_finance"
+          },
+          "format": "table",
+          "group": [],
+          "metricColumn": "none",
+          "queryType": "randomWalk",
+          "rawQuery": true,
+          "rawSql": "with t as (select date_trunc('month', d.time) as time,\n                  i.name as item_name,\n                  sum(i.sum) as amount\n           from debit d\n           inner join shopping_receipt_items i on d.id = i.shopping_receipt_id\n           where category in ([[category]])\n             and coalesce(merchant_name, description) in ([[merchant]])\n             and (i.name in ([[receipt_item]]) or '__all__' in ([[receipt_item]]))\n             and date_trunc('month', time) > date_trunc('month', now() - '3 months'::interval)\n           group by 1, 2\n           order by 2, 1),\n     prev as (select *\n              from t\n              where date_trunc('month', time) = date_trunc('month', now() - (case when date_part('day', now()) >= 15 then '1 month' else '2 months' end)::interval)),\n     curr as (select *\n              from t\n              where date_trunc('month', time) = date_trunc('month', now() - (case when date_part('day', now()) >= 15 then '0' else '1 month' end)::interval)),\n     cmp as (select coalesce(prev.item_name, curr.item_name) as item_name,\n                    coalesce(prev.amount, 0)                         as prev_amount,\n                    coalesce(curr.amount, 0)                         as curr_amount\n             from prev\n                      full join curr on prev.item_name = curr.item_name)\nselect 'All' as item_name, sum(prev_amount) as \"last\", sum(curr_amount) as \"curr\"\nfrom cmp\nunion all\n(select item_name, prev_amount as \"last\", curr_amount as \"curr\"\n from cmp\n order by curr_amount desc, prev_amount desc)",
+          "refId": "A",
+          "select": [
+            [
+              {
+                "params": [
+                  "value"
+                ],
+                "type": "column"
+              }
+            ]
+          ],
+          "timeColumn": "time",
+          "where": [
+            {
+              "name": "$__timeFilter",
+              "params": [],
+              "type": "macro"
+            }
+          ]
+        }
+      ],
+      "title": "Items",
+      "type": "table"
+    }
+  ],
+  "refresh": "",
+  "schemaVersion": 35,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "current": {
+          "selected": false,
+          "text": "12",
+          "value": "12"
+        },
+        "hide": 0,
+        "includeAll": false,
+        "label": "PIR months",
+        "multi": false,
+        "name": "pir_months",
+        "options": [
+          {
+            "selected": false,
+            "text": "1",
+            "value": "1"
+          },
+          {
+            "selected": false,
+            "text": "3",
+            "value": "3"
+          },
+          {
+            "selected": false,
+            "text": "6",
+            "value": "6"
+          },
+          {
+            "selected": true,
+            "text": "12",
+            "value": "12"
+          }
+        ],
+        "query": "1, 3, 6, 12",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "allValue": "",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "pg_finance"
+        },
+        "definition": "select distinct category from debit where time >= $__timeFrom() and time < $__timeTo()",
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "name": "category",
+        "options": [],
+        "query": "select distinct category from debit where time >= $__timeFrom() and time < $__timeTo()",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "tagValuesQuery": "",
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": "",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "pg_finance"
+        },
+        "definition": "select distinct merchant_name from debit where time >= $__timeFrom() and time < $__timeTo() and category in ([[category]])",
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "name": "merchant",
+        "options": [],
+        "query": "select distinct merchant_name from debit where time >= $__timeFrom() and time < $__timeTo() and category in ([[category]])",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 1,
+        "type": "query"
+      },
+      {
+        "allValue": "'__all__'",
+        "current": {
+          "selected": true,
+          "text": [
+            "All"
+          ],
+          "value": [
+            "$__all"
+          ]
+        },
+        "datasource": {
+          "type": "postgres",
+          "uid": "pg_finance"
+        },
+        "definition": "select distinct name from shopping_receipt_items i inner join debit d on i.shopping_receipt_id = d.id where d.time >= $__timeFrom() and d.time < $__timeTo() order by name",
+        "hide": 0,
+        "includeAll": true,
+        "multi": true,
+        "name": "receipt_item",
+        "options": [],
+        "query": "select distinct name from shopping_receipt_items i inner join debit d on i.shopping_receipt_id = d.id where d.time >= $__timeFrom() and d.time < $__timeTo() order by name",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "time": {
+    "from": "now-13M",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Expenses",
+  "uid": "uGiQ1BuMz",
+  "version": 79,
+  "weekStart": ""
+}
