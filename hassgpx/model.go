@@ -1,7 +1,6 @@
 package hassgpx
 
 import (
-	"context"
 	"encoding/xml"
 	"time"
 )
@@ -38,8 +37,4 @@ type Waypoint struct {
 	Longitude float64   `xml:"lon,attr"`
 	Elevation float64   `xml:"ele"`
 	Time      time.Time `xml:"time"`
-}
-
-type Storage interface {
-	GetLastTrack(ctx context.Context, entityID string, since time.Time, maxSpeed float64, moveInterval time.Duration) ([]Waypoint, error)
 }

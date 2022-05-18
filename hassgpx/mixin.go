@@ -8,16 +8,12 @@ import (
 
 	"homebot/common"
 
-	"github.com/jfk9w-go/flu/colf"
-
-	"github.com/jfk9w-go/flu/syncf"
-
-	"github.com/jfk9w-go/telegram-bot-api/ext/tapp"
-
-	"github.com/jfk9w-go/flu/apfel"
-
 	"github.com/jfk9w-go/flu"
+	"github.com/jfk9w-go/flu/apfel"
+	"github.com/jfk9w-go/flu/colf"
+	"github.com/jfk9w-go/flu/syncf"
 	"github.com/jfk9w-go/telegram-bot-api"
+	"github.com/jfk9w-go/telegram-bot-api/ext/tapp"
 	"github.com/pkg/errors"
 )
 
@@ -36,7 +32,7 @@ type (
 
 type Mixin[C Context] struct {
 	clock        syncf.Clock
-	storage      Storage
+	storage      Storage[C]
 	users        map[telegram.ID]string
 	maxSpeed     float64
 	lastDays     int
@@ -53,13 +49,13 @@ func (m *Mixin[C]) Include(ctx context.Context, app apfel.MixinApp[C]) error {
 		return apfel.ErrDisabled
 	}
 
-	db := &apfel.GormDB[C]{Config: config.DB}
-	if err := app.Use(ctx, db, false); err != nil {
+	var db Storage[C]
+	if err := app.Use(ctx, &db, false); err != nil {
 		return err
 	}
 
 	m.clock = app
-	m.storage = (*SQLStorage)(db.DB())
+	m.storage = db
 	m.users = config.Users
 	m.maxSpeed = config.MaxSpeed
 	m.lastDays = config.LastDays
@@ -75,10 +71,6 @@ func (m *Mixin[C]) CommandScope() tapp.CommandScope {
 	}
 
 	return tapp.CommandScope{UserIDs: userIDs}
-}
-
-func (m *Mixin[C]) TelegramListener() tapp.Listener {
-	return m
 }
 
 //goland:noinspection GoSnakeCaseUsage
@@ -118,13 +110,13 @@ func (m *Mixin[C]) Get_GPX_track(ctx context.Context, client telegram.Client, cm
 	}
 
 	filename := strings.Replace(waypoints[0].Time.String(), ":", "_", -1) + ".gpx"
-	_, err = client.Send(ctx, cmd.Chat.ID,
+	if _, err := client.Send(ctx, cmd.Chat.ID,
 		&telegram.Media{
 			Type:     telegram.Document,
 			Input:    buffer,
-			Filename: filename},
-		nil)
-	if err != nil {
+			Filename: filename,
+		}, nil,
+	); err != nil {
 		return errors.Wrap(err, "send gpx track")
 	}
 

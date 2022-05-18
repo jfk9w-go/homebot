@@ -50,10 +50,6 @@ func (m *Mixin[C]) String() string {
 	return "tinkoff"
 }
 
-func (m *Mixin[C]) TelegramListener() tapp.Listener {
-	return m
-}
-
 func (m *Mixin[C]) Include(ctx context.Context, app apfel.MixinApp[C]) error {
 	config := app.Config().TinkoffConfig()
 	if !config.Enabled {

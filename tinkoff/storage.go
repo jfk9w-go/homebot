@@ -11,7 +11,6 @@ import (
 
 	"github.com/jfk9w-go/flu/apfel"
 	"github.com/jfk9w-go/flu/gormf"
-	"github.com/jfk9w-go/flu/logf"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
@@ -42,7 +41,7 @@ func (m *Storage[C]) Include(ctx context.Context, app apfel.MixinApp[C]) error {
 
 	gorm := &apfel.GormDB[C]{Config: app.Config().TinkoffConfig().DB}
 	if err := app.Use(ctx, gorm, false); err != nil {
-		return errors.Wrap(err, "use gorm db")
+		return err
 	}
 
 	db := gorm.DB()
@@ -62,15 +61,15 @@ func (m *Storage[C]) Include(ctx context.Context, app apfel.MixinApp[C]) error {
 	}
 
 	if err := db.WithContext(ctx).Exec(debitDDL).Error; err != nil {
-		logf.Get(m).Errorf(ctx, "failed to create debit view: %+v", err)
+		return errors.Wrap(err, "create debit view")
 	}
 
 	if err := db.WithContext(ctx).Exec(creditDDL).Error; err != nil {
-		logf.Get(m).Errorf(ctx, "failed to create credit view: %+v", err)
+		return errors.Wrap(err, "create credit view")
 	}
 
 	if err := db.WithContext(ctx).Exec(tradingPositionsDDL).Error; err != nil {
-		logf.Get(m).Errorf(ctx, "failed to create trading positions view: %+v", err)
+		return errors.Wrap(err, "create trading_positions view")
 	}
 
 	m.db = db
