@@ -59,7 +59,7 @@ with events_cum_q as (select username,
                                from events_id,
                                     lateral generate_series(1, abs(quantity)) generate_series(generate_series)
                                where quantity < 0) y using (rn, ticker)) t)
-SELECT events.ticker,
+select events.ticker,
        events.currency,
        events.buy_time,
        events.buy_price,

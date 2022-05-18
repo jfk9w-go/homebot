@@ -5,8 +5,9 @@ import (
 	"database/sql"
 	_ "embed"
 	"fmt"
-	"homebot/tinkoff/external"
 	"time"
+
+	"homebot/tinkoff/external"
 
 	"github.com/jfk9w-go/flu/apfel"
 	"github.com/jfk9w-go/flu/gormf"
@@ -15,8 +16,16 @@ import (
 	"gorm.io/gorm"
 )
 
-//go:embed ddl/trading_positions.sql
-var tradingPositionsDDL string
+var (
+	//go:embed ddl/debit.sql
+	debitDDL string
+
+	//go:embed ddl/credit.sql
+	creditDDL string
+
+	//go:embed ddl/trading_positions.sql
+	tradingPositionsDDL string
+)
 
 type Storage[C Context] struct {
 	db *gorm.DB
@@ -50,6 +59,14 @@ func (m *Storage[C]) Include(ctx context.Context, app apfel.MixinApp[C]) error {
 		external.Candle{},
 	); err != nil {
 		return errors.Wrap(err, "auto migrate")
+	}
+
+	if err := db.WithContext(ctx).Exec(debitDDL).Error; err != nil {
+		logf.Get(m).Errorf(ctx, "failed to create debit view: %+v", err)
+	}
+
+	if err := db.WithContext(ctx).Exec(creditDDL).Error; err != nil {
+		logf.Get(m).Errorf(ctx, "failed to create credit view: %+v", err)
 	}
 
 	if err := db.WithContext(ctx).Exec(tradingPositionsDDL).Error; err != nil {
