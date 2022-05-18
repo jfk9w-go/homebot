@@ -25,7 +25,7 @@ type (
 
 	Config struct {
 		Enabled     bool                       `yaml:"enabled,omitempty" doc:"Enables the service and bot command."`
-		DB          apfel.GormConfig           `yaml:"db" doc:"This database will be used for saving bank data. Tables and views will be created automatically."`
+		DB          apfel.GormConfig           `yaml:"db" doc:"This database will be used for saving bank data. Tables and views will be created automatically. Only 'postgres' driver is supported."`
 		Credentials map[telegram.ID]Credential `yaml:"credentials" doc:"User credentials so you don't have to enter your password each time you want to sync data. Keys are telegram user IDs and values are credentials.\nOnly users with IDs found in this map will be allowed to execute /update_bank_statement (they still need to receive and enter confirmation code, though)."`
 		Reload      flu.Duration               `yaml:"reload,omitempty" doc:"Default time interval to synchronize data for (the point of origin may differ for different chapters, or it may be not used at all).\nThis can be overridden by the first parameter to /update_bank_statement [days int]." example:"72h" default:"168h" format:"duration"`
 		Receipts    bool                       `yaml:"receipts,omitempty" doc:"Whether to enable shopping receipt downloading. It is known to hit rate limits recently, which cool down pretty slowly, so enable at your own risk (there is none, really)."`

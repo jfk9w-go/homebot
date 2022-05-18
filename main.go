@@ -8,8 +8,6 @@ import (
 	"homebot/tinkoff"
 	"homebot/tinkoff/chapter"
 
-	"gorm.io/gorm"
-
 	"github.com/jfk9w-go/flu"
 	"github.com/jfk9w-go/flu/apfel"
 	"github.com/jfk9w-go/flu/gormf"
@@ -17,6 +15,7 @@ import (
 	"github.com/jfk9w-go/telegram-bot-api"
 	"github.com/jfk9w-go/telegram-bot-api/ext/tapp"
 	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 )
 
 type C struct {
@@ -80,7 +79,9 @@ func main() {
 
 	var (
 		gorm = apfel.Gorm[C]{
-			Drivers: apfel.GormDrivers{"postgres": postgres.Open},
+			Drivers: apfel.GormDrivers{
+				"postgres": postgres.Open,
+			},
 			Config: gorm.Config{
 				Logger: gormf.LogfLogger(app, func() logf.Interface { return logf.Get("gorm.sql") }),
 			},
