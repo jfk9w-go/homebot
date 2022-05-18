@@ -2,10 +2,13 @@ package main
 
 import (
 	"context"
+	"os"
+
 	"homebot/hassgpx"
 	"homebot/tinkoff"
 	"homebot/tinkoff/chapter"
-	"os"
+
+	"gorm.io/gorm"
 
 	"github.com/jfk9w-go/flu"
 	"github.com/jfk9w-go/flu/apfel"
@@ -16,25 +19,30 @@ import (
 	"gorm.io/driver/postgres"
 )
 
-type Config struct {
-	Token   string           `yaml:"token" doc:"Telegram Bot API token."`
-	Logging apfel.LogfConfig `yaml:"logging,omitempty" doc:"Logging configuration."`
-	HassGPX hassgpx.Config   `yaml:"hassgpx,omitempty" doc:"HassGPX exposes a /get_gpx_track command which produces an auto-detected probably-bicycle GPX track based on Home Assistant tracking data over the last N days."`
-	Tinkoff struct {
+type C struct {
+	Telegram tapp.Config      `yaml:"telegram" doc:"Telegram Bot API token."`
+	Logging  apfel.LogfConfig `yaml:"logging,omitempty" doc:"Logging configuration."`
+	HassGPX  hassgpx.Config   `yaml:"hassgpx,omitempty" doc:"HassGPX exposes a /get_gpx_track command which produces an auto-detected probably-bicycle GPX track based on Home Assistant tracking data over the last N days."`
+	Tinkoff  struct {
 		tinkoff.Config `yaml:"-,inline"`
 		Encode         string `yaml:"encode,omitempty" enum:"gob,yml,json" doc:"This will generate encoded credentials data from current config which can be piped to a separate config file and then used as '--config.file' CLI argument.\nThis is done for illusion of safety: you can remove encoded credentials from plain text config, and technically this is safer, but you should also take other reasonable precautions.\nExample: './homebot --config.file=config.yml --tinkoff.encode=gob > credentials.gob; ./homebot --config.file=config.yml --config.file=credentials.gob'"`
 	} `yaml:"tinkoff,omitempty" doc:"Tinkoff exposes an /update_bank_statement command which pulls data from tinkoff.ru API and puts it into a database for further use.\nOnly 'tinkoff.db.driver=postgres' is supported at the moment."`
 }
 
-func (c Config) LogfConfig() apfel.LogfConfig  { return c.Logging }
-func (c Config) HassGPXConfig() hassgpx.Config { return c.HassGPX }
-func (c Config) TinkoffConfig() tinkoff.Config { return c.Tinkoff.Config }
+func (c C) TelegramConfig() tapp.Config   { return c.Telegram }
+func (c C) LogfConfig() apfel.LogfConfig  { return c.Logging }
+func (c C) HassGPXConfig() hassgpx.Config { return c.HassGPX }
+func (c C) TinkoffConfig() tinkoff.Config { return c.Tinkoff.Config }
 
 const Description = `
-  homebot is a sort-of-everyday (?) tool collection in the form of Telegram bot. At the moment it supports two commands:
+  homebot is a sort-of-everyday (?) tool collection in the form of Telegram bot. At the moment it supports three commands:
     
+    /start                 – replies with your user ID and bot version
+                             This can be used to get user ID in order to fill tinkoff.credentials configuration section.
+
     /update_bank_statement – pulls data from tinkoff and puts it into a postgres
                              See 'tinkoff' configuration section for more info.
+                             Note that it's recommended to encode credentials so as not to keep them in plain text configuration.
 
     /get_gpx_track         – collects Home Assistant tracking data from its database (only postgres supported)
                              in GPX format.
@@ -48,7 +56,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	app := apfel.Boot[Config]{
+	app := apfel.Boot[C]{
 		Name:    "homebot",
 		Version: GitCommit,
 		Desc:    Description,
@@ -70,23 +78,27 @@ func main() {
 		return
 	}
 
-	gorm := &apfel.Gorm[Config]{Drivers: apfel.GormDrivers{"postgres": postgres.Open}}
-	gorm.Config.Logger = gormf.LogfLogger(app, func() logf.Interface { return logf.Get(gorm, "sql") })
+	var (
+		gorm = apfel.Gorm[C]{
+			Drivers: apfel.GormDrivers{"postgres": postgres.Open},
+			Config: gorm.Config{
+				Logger: gormf.LogfLogger(app, func() logf.Interface { return logf.Get("gorm.sql") }),
+			},
+		}
 
-	telegram := &tapp.Mixin[Config]{
-		Token: app.Config().Token,
-	}
+		telegram tapp.Mixin[C]
+	)
 
 	app.Uses(ctx,
-		new(apfel.Logf[Config]),
-		gorm,
-		new(hassgpx.Mixin[Config]),
-		new(tinkoff.Mixin[Config]),
-		new(chapter.Accounts[Config]),
-		new(chapter.TradingOperations[Config]),
-		new(chapter.PurchasedSecurities[Config]),
-		new(chapter.Candles[Config]),
-		telegram,
+		new(apfel.Logf[C]),
+		&gorm,
+		new(hassgpx.Mixin[C]),
+		new(tinkoff.Mixin[C]),
+		new(chapter.Accounts[C]),
+		new(chapter.TradingOperations[C]),
+		new(chapter.PurchasedSecurities[C]),
+		new(chapter.Candles[C]),
+		&telegram,
 	)
 
 	telegram.Run(ctx)

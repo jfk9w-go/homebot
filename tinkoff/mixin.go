@@ -2,10 +2,13 @@ package tinkoff
 
 import (
 	"context"
-	"homebot/tinkoff/external"
 	"strconv"
 	"strings"
 	"time"
+
+	"homebot/tinkoff/external"
+
+	"github.com/jfk9w-go/flu/colf"
 
 	"github.com/jfk9w-go/flu"
 	"github.com/jfk9w-go/flu/apfel"
@@ -26,7 +29,7 @@ type (
 		Credentials map[telegram.ID]Credential `yaml:"credentials" doc:"User credentials so you don't have to enter your password each time you want to sync data. Keys are telegram user IDs and values are credentials.\nOnly users with IDs found in this map will be allowed to execute /update_bank_statement (they still need to receive and enter confirmation code, though)."`
 		Reload      flu.Duration               `yaml:"reload,omitempty" doc:"Default time interval to synchronize data for (the point of origin may differ for different chapters, or it may be not used at all).\nThis can be overridden by the first parameter to /update_bank_statement [days int]." example:"72h" default:"168h" format:"duration"`
 		Receipts    bool                       `yaml:"receipts,omitempty" doc:"Whether to enable shopping receipt downloading. It is known to hit rate limits recently, which cool down pretty slowly, so enable at your own risk (there is none, really)."`
-		Chapters    flu.Set[string]            `yaml:"chapters,omitempty" doc:"Object chapters to synchronize. You can find chapter explanation in README.md (though the titles should be pretty self-explanatory)." enum:"tinkoff.chapter.accounts,tinkoff.chapter.trading-operations,tinkoff.chapter.purchased-securities,tinkoff.chapter.candles" default:"[\"tinkoff.chapter.accounts\",\"tinkoff.chapter.trading-operations\",\"tinkoff.chapter.purchased-securities\",\"tinkoff.chapter.candles\"]"`
+		Chapters    colf.Set[string]           `yaml:"chapters,omitempty" doc:"Object chapters to synchronize. You can find chapter explanation in README.md (though the titles should be pretty self-explanatory)." enum:"tinkoff.chapter.accounts,tinkoff.chapter.trading-operations,tinkoff.chapter.purchased-securities,tinkoff.chapter.candles" default:"[\"tinkoff.chapter.accounts\",\"tinkoff.chapter.trading-operations\",\"tinkoff.chapter.purchased-securities\",\"tinkoff.chapter.candles\"]"`
 	}
 
 	Context interface{ TinkoffConfig() Config }
@@ -73,9 +76,9 @@ func (m *Mixin[C]) AfterInclude(ctx context.Context, app apfel.MixinApp[C], mixi
 }
 
 func (m *Mixin[C]) CommandScope() tapp.CommandScope {
-	userIDs := make(flu.Set[telegram.ID], len(m.credentials))
+	userIDs := make(colf.Set[telegram.ID], len(m.credentials))
 	for userID := range m.credentials {
-		userIDs.Append(userID)
+		userIDs.Add(userID)
 	}
 
 	return tapp.CommandScope{UserIDs: userIDs}

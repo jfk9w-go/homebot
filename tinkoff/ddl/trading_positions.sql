@@ -1,5 +1,4 @@
-drop view if exists trading_positions;
-create view trading_positions
+create or replace view trading_positions
             (ticker, currency, buy_time, buy_price, quantity, sell_time, sell_price, username) as
 with events_cum_q as (select username,
                              id,

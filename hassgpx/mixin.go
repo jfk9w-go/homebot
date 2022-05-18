@@ -3,9 +3,12 @@ package hassgpx
 import (
 	"context"
 	"fmt"
-	"homebot/common"
 	"strings"
 	"time"
+
+	"homebot/common"
+
+	"github.com/jfk9w-go/flu/colf"
 
 	"github.com/jfk9w-go/flu/syncf"
 
@@ -14,7 +17,7 @@ import (
 	"github.com/jfk9w-go/flu/apfel"
 
 	"github.com/jfk9w-go/flu"
-	telegram "github.com/jfk9w-go/telegram-bot-api"
+	"github.com/jfk9w-go/telegram-bot-api"
 	"github.com/pkg/errors"
 )
 
@@ -66,9 +69,9 @@ func (m *Mixin[C]) Include(ctx context.Context, app apfel.MixinApp[C]) error {
 }
 
 func (m *Mixin[C]) CommandScope() tapp.CommandScope {
-	userIDs := make(flu.Set[telegram.ID], len(m.users))
+	userIDs := make(colf.Set[telegram.ID], len(m.users))
 	for userID := range m.users {
-		userIDs.Append(userID)
+		userIDs.Add(userID)
 	}
 
 	return tapp.CommandScope{UserIDs: userIDs}
