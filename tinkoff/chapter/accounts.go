@@ -2,14 +2,14 @@ package chapter
 
 import (
 	"context"
-	"homebot/tinkoff"
-	"homebot/tinkoff/external"
 	"time"
 
-	"github.com/jfk9w-go/flu/syncf"
+	"homebot/tinkoff"
+	"homebot/tinkoff/external"
 
 	"github.com/jfk9w-go/flu/apfel"
 	"github.com/jfk9w-go/flu/gormf"
+	"github.com/jfk9w-go/flu/syncf"
 	"github.com/pkg/errors"
 	"gorm.io/gorm"
 )
@@ -73,9 +73,10 @@ func (m *Accounts[C]) Sync(ctx context.Context, client *external.Client, period 
 	operations := make([]tinkoff.Chapter, len(importantAccounts))
 	for i, account := range importantAccounts {
 		operations[i] = &Operations[C]{
-			storage: m.storage,
-			clock:   m.clock,
-			account: account,
+			storage:  m.storage,
+			clock:    m.clock,
+			account:  account,
+			receipts: m.receipts,
 		}
 	}
 
