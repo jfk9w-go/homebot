@@ -25,7 +25,7 @@ type C struct {
 	Tinkoff  struct {
 		tinkoff.Config `yaml:"-,inline"`
 		Encode         string `yaml:"encode,omitempty" enum:"gob,yml,json" doc:"This will generate encoded credentials data from current config which can be piped to a separate config file and then used as '--config.file' CLI argument.\nThis is done for illusion of safety: you can remove encoded credentials from plain text config, and technically this is safer, but you should also take other reasonable precautions.\nExample: './homebot --config.file=config.yml --tinkoff.encode=gob > credentials.gob; ./homebot --config.file=config.yml --config.file=credentials.gob'"`
-	} `yaml:"tinkoff,omitempty" doc:"Tinkoff exposes an /update_bank_statement command which pulls data from tinkoff.ru API and puts it into a database for further use.\nOnly 'tinkoff.db.driver=postgres' is supported at the moment."`
+	} `yaml:"tinkoff,omitempty" doc:"Tinkoff exposes an /update_bank_statement command which pulls data from tinkoff.ru API and puts it into a database for further use."`
 }
 
 func (c C) TelegramConfig() tapp.Config   { return c.Telegram }
