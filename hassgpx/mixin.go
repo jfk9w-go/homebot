@@ -19,7 +19,6 @@ import (
 
 type (
 	Config struct {
-		Enabled      bool                   `yaml:"enabled,omitempty" doc:"Enables the service and bot command."`
 		DB           apfel.GormConfig       `yaml:"db" doc:"Home Assistant database connection settings. This is used for collecting tracking data from Home Assistant."`
 		MaxSpeed     float64                `yaml:"maxSpeed,omitempty" doc:"Maximum speed to be considered \"in track\". This is a really rough approximation via coordinate and time change between two consecutive tracking points,\nand is used to distinguish between using bicycle and other vehicles (like city trains when you forget to turn off tracking – again, REALLY rough approximation)." default:"55"`
 		LastDays     int                    `yaml:"lastDays,omitempty" doc:"Number of full past days to detect bicycle tracks over. 0 means 'today'." default:"0"`
@@ -44,22 +43,17 @@ func (m *Mixin[C]) String() string {
 }
 
 func (m *Mixin[C]) Include(ctx context.Context, app apfel.MixinApp[C]) error {
-	config := app.Config().HassGPXConfig()
-	if !config.Enabled {
-		return apfel.ErrDisabled
-	}
-
-	var db Storage[C]
-	if err := app.Use(ctx, &db, false); err != nil {
+	if err := app.Use(ctx, &m.storage, false); err != nil {
 		return err
 	}
 
-	m.clock = app
-	m.storage = db
+	config := app.Config().HassGPXConfig()
 	m.users = config.Users
 	m.maxSpeed = config.MaxSpeed
 	m.lastDays = config.LastDays
 	m.moveInterval = config.MoveInterval.Value
+
+	m.clock = app
 
 	return nil
 }

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"homebot/tinkoff/external"
+	"homebot/3rdparty/tinkoff"
 
 	"github.com/jfk9w-go/flu/apfel"
 	"github.com/jfk9w-go/flu/gormf"
@@ -35,10 +35,6 @@ func (m *Storage[C]) String() string {
 }
 
 func (m *Storage[C]) Include(ctx context.Context, app apfel.MixinApp[C]) error {
-	if !app.Config().TinkoffConfig().Enabled {
-		return apfel.ErrDisabled
-	}
-
 	gorm := &apfel.GormDB[C]{Config: app.Config().TinkoffConfig().DB}
 	if err := app.Use(ctx, gorm, false); err != nil {
 		return err
@@ -47,15 +43,15 @@ func (m *Storage[C]) Include(ctx context.Context, app apfel.MixinApp[C]) error {
 	db := gorm.DB()
 	db.FullSaveAssociations = true
 	if err := db.WithContext(ctx).AutoMigrate(
-		external.Account{},
-		external.Operation{},
-		//external.OperationLocation{},
-		external.OperationLoyaltyBonus{},
-		external.ShoppingReceipt{},
-		external.ShoppingReceiptItem{},
-		external.TradingOperation{},
-		external.PurchasedSecurity{},
-		external.Candle{},
+		tinkoff.Account{},
+		tinkoff.Operation{},
+		tinkoff.OperationLocation{},
+		tinkoff.OperationLoyaltyBonus{},
+		tinkoff.ShoppingReceipt{},
+		tinkoff.ShoppingReceiptItem{},
+		tinkoff.TradingOperation{},
+		tinkoff.PurchasedSecurity{},
+		tinkoff.Candle{},
 	); err != nil {
 		return errors.Wrap(err, "auto migrate")
 	}
@@ -74,6 +70,97 @@ func (m *Storage[C]) Include(ctx context.Context, app apfel.MixinApp[C]) error {
 
 	m.db = db
 	return nil
+}
+
+func (m *Storage[C]) RefreshAccounts(ctx context.Context, accounts []tinkoff.Account) error {
+	var model tinkoff.Account
+	onConflict := gormf.OnConflictClause(&model, "primaryKey", true, nil)
+	return m.db.WithContext(ctx).Clauses(onConflict).CreateInBatches(accounts, 1000).Error
+}
+
+func (m *Storage[C]) GetOperationRefreshIntervalStart(ctx context.Context, accountID string) (time.Time, error) {
+	var (
+		model tinkoff.Operation
+		value sql.NullTime
+	)
+
+	if err := m.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		if err := tx.Model(&model).
+			Where("debiting_time is null and account_id = ?", accountID).
+			Select("min(time)").
+			Scan(&value).
+			Error; err != nil {
+			return errors.Wrap(err, "select min debiting time")
+		}
+
+		if value.Valid {
+			return nil
+		}
+
+		if err := tx.Model(&model).
+			Where("account_id = ?", accountID).
+			Select("max(time)").
+			Scan(&value).
+			Error; err != nil {
+			return errors.Wrap(err, "select max time")
+		}
+
+		return nil
+	}); err != nil {
+		return time.Time{}, err
+	}
+
+	return value.Time, nil
+}
+
+func (m *Storage[C]) RefreshOperations(ctx context.Context, accountID string, since time.Time, operations []tinkoff.Operation) error {
+	var model tinkoff.Operation
+	return m.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		deleteTx := tx.
+			Where("debiting_time is null and account_id = ? and time >= ?", accountID, since).
+			Delete(&model)
+		if err := deleteTx.Error; err != nil {
+			return errors.Wrap(err, "delete")
+		}
+
+		onConflict := gormf.OnConflictClause(&model, "primaryKey", true, nil)
+		createTx := tx.Clauses(onConflict).
+			CreateInBatches(operations, 1000)
+		if err := createTx.Error; err != nil {
+			return errors.Wrap(err, "create")
+		}
+
+		return nil
+	})
+}
+
+func (m *Storage[C]) GetPendingShoppingReceiptOperationIDs(ctx context.Context, accountID string) ([]uint64, error) {
+	var operationIDs []uint64
+	if err := m.db.WithContext(ctx).Raw(`
+		select distinct o.id 
+		from operations o 
+		left join shopping_receipts sr 
+		on o.id = sr.operation_id
+		where o.has_shopping_receipt
+          and o.debiting_time is not null
+          and sr.total_sum is null
+          and o.account_id = ?`, accountID).
+		Scan(&operationIDs).
+		Error; err != nil {
+		return nil, err
+	}
+
+	return operationIDs, nil
+}
+
+func (m *Storage[C]) StoreShoppingReceipt(ctx context.Context, receipt *tinkoff.ShoppingReceipt) error {
+	return m.db.WithContext(ctx).Create(receipt).Error
+}
+
+func (m *Storage[C]) RemoveShoppingReceiptFlag(ctx context.Context, operationID uint64) error {
+	return m.db.WithContext(ctx).
+		Exec("update operations set has_shopping_receipt = false where id = ?", operationID).
+		Error
 }
 
 func (m *Storage[C]) GetLatestTime(ctx context.Context, entity interface{}, tenant interface{}) (latestTime time.Time, err error) {
@@ -105,10 +192,12 @@ func (m *Storage[C]) GetLatestTime(ctx context.Context, entity interface{}, tena
 	return
 }
 
-type TradingPosition struct {
-	Ticker   string
-	BuyTime  *time.Time
-	SellTime *time.Time
+func (m *Storage[C]) DB(ctx context.Context) *gorm.DB {
+	return m.db.WithContext(ctx)
+}
+
+func (m *Storage[C]) Tx(ctx context.Context, tx func(tx *gorm.DB) error) error {
+	return m.db.WithContext(ctx).Transaction(tx)
 }
 
 func (m *Storage[C]) GetTradingPositions(ctx context.Context, from time.Time, username string) ([]TradingPosition, error) {
@@ -118,8 +207,4 @@ func (m *Storage[C]) GetTradingPositions(ctx context.Context, from time.Time, us
 		Where("(sell_time is null or sell_time >= ?) and username = ?", from, username).
 		Scan(&ps).
 		Error
-}
-
-func (m *Storage[C]) Tx(ctx context.Context, tx func(db *gorm.DB) error) error {
-	return m.db.WithContext(ctx).Transaction(tx)
 }

@@ -1,7 +1,8 @@
-package external
+package tinkoff
 
 import (
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"gopkg.in/guregu/null.v3"
@@ -77,16 +78,16 @@ type Operation struct {
 		Name string `json:"name" gorm:"column:category"`
 	} `json:"spendingCategory" gorm:"embedded"`
 
-	CardNumber  null.String `json:"cardNumber"`
-	MCC         string      `json:"mccString" gorm:"type:char(4);not null"`
-	CardPresent bool        `json:"cardPresent" gorm:"not null"`
-	//Locations   []OperationLocation `json:"locations" gorm:"constraint:OnDelete:CASCADE;foreignKey:OperationID"`
-	Merchant OperationMerchant `json:"merchant" gorm:"embedded;embeddedPrefix:merchant_"`
+	CardNumber  null.String         `json:"cardNumber"`
+	MCC         string              `json:"mccString" gorm:"type:char(4);not null"`
+	CardPresent bool                `json:"cardPresent" gorm:"not null"`
+	Locations   []OperationLocation `json:"locations" gorm:"constraint:OnDelete:CASCADE;foreignKey:OperationID"`
+	Merchant    OperationMerchant   `json:"merchant" gorm:"embedded;embeddedPrefix:merchant_"`
 
 	AccountID string `json:"account" gorm:"tenant;constraint:OnDelete:CASCADE"`
 	Account   Account
 
-	HasShoppingReceipt bool `json:"hasShoppingReceipt" gorm:"-"`
+	HasShoppingReceipt bool `json:"hasShoppingReceipt" gorm:"not null"`
 
 	ShoppingReceipt *ShoppingReceipt `json:"-" gorm:"constraint:OnDelete:CASCADE"`
 }
@@ -194,7 +195,12 @@ type ShoppingReceipt struct {
 //
 
 type Account struct {
-	ID   string `json:"id" gorm:"primaryKey"`
-	Name string `json:"name" gorm:"not null"`
-	Type string `json:"accountType" gorm:"not null"`
+	ID       string `json:"id" gorm:"primaryKey"`
+	Name     string `json:"name" gorm:"not null"`
+	Type     string `json:"accountType" gorm:"not null"`
+	Username string `json:"-" gorm:"not null"`
+}
+
+func (a Account) String() string {
+	return fmt.Sprintf("%s (*%s)", a.Name, a.ID[len(a.ID)-3:])
 }

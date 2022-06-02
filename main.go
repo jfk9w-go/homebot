@@ -3,16 +3,19 @@ package main
 import (
 	"context"
 	"os"
+	"strings"
 
 	"homebot/hassgpx"
 	"homebot/tinkoff"
-	"homebot/tinkoff/chapter"
+
+	"github.com/pkg/errors"
 
 	"github.com/jfk9w-go/flu"
 	"github.com/jfk9w-go/flu/apfel"
 	"github.com/jfk9w-go/flu/gormf"
 	"github.com/jfk9w-go/flu/logf"
 	"github.com/jfk9w-go/telegram-bot-api"
+	tg "github.com/jfk9w-go/telegram-bot-api"
 	"github.com/jfk9w-go/telegram-bot-api/ext/tapp"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -21,16 +24,20 @@ import (
 type C struct {
 	Telegram tapp.Config      `yaml:"telegram" doc:"Telegram Bot API token."`
 	Logging  apfel.LogfConfig `yaml:"logging,omitempty" doc:"Logging configuration."`
-	HassGPX  hassgpx.Config   `yaml:"hassgpx,omitempty" doc:"HassGPX exposes a /get_gpx_track command which produces an auto-detected probably-bicycle GPX track based on Home Assistant tracking data over the last N days."`
-	Tinkoff  struct {
-		tinkoff.Config `yaml:"-,inline"`
+	HassGPX  struct {
+		Enabled        bool `yaml:"enabled,omitempty" doc:"Enables the service and bot command."`
+		hassgpx.Config `yaml:"-,inline"`
+	} `yaml:"hassgpx,omitempty" doc:"HassGPX exposes a /get_gpx_track command which produces an auto-detected probably-bicycle GPX track based on Home Assistant tracking data over the last N days."`
+	Tinkoff struct {
+		Enabled        bool   `yaml:"enabled,omitempty" doc:"Enables the service and bot command."`
 		Encode         string `yaml:"encode,omitempty" enum:"gob,yml,json" doc:"This will generate encoded credentials data from current config which can be piped to a separate config file and then used as '--config.file' CLI argument.\nThis is done for illusion of safety: you can remove encoded credentials from plain text config, and technically this is safer, but you should also take other reasonable precautions.\nExample: './homebot --config.file=config.yml --tinkoff.encode=gob > credentials.gob; ./homebot --config.file=config.yml --config.file=credentials.gob'"`
+		tinkoff.Config `yaml:"-,inline"`
 	} `yaml:"tinkoff,omitempty" doc:"Tinkoff exposes an /update_bank_statement command which pulls data from tinkoff.ru API and puts it into a database for further use."`
 }
 
 func (c C) TelegramConfig() tapp.Config   { return c.Telegram }
 func (c C) LogfConfig() apfel.LogfConfig  { return c.Logging }
-func (c C) HassGPXConfig() hassgpx.Config { return c.HassGPX }
+func (c C) HassGPXConfig() hassgpx.Config { return c.HassGPX.Config }
 func (c C) TinkoffConfig() tinkoff.Config { return c.Tinkoff.Config }
 
 const Description = `
@@ -93,14 +100,39 @@ func main() {
 	app.Uses(ctx,
 		new(apfel.Logf[C]),
 		&gorm,
-		new(hassgpx.Mixin[C]),
-		new(tinkoff.Mixin[C]),
-		new(chapter.Accounts[C]),
-		new(chapter.TradingOperations[C]),
-		new(chapter.PurchasedSecurities[C]),
-		new(chapter.Candles[C]),
 		&telegram,
 	)
+
+	if config := app.Config().Tinkoff; config.Enabled {
+		app.Uses(ctx,
+			&apfel.MixinAny[C, tinkoff.ConfirmFunc]{
+				Value: func(ctx context.Context, username string) (code string, err error) {
+					var userID tg.ID
+					for uid, cred := range config.Credentials {
+						if cred.Username == username {
+							userID = uid
+						}
+					}
+
+					if userID == 0 {
+						return "", errors.Errorf("no telegram user ID matches Tinkoff username %s", username)
+					}
+
+					message, err := telegram.Bot().Ask(ctx, userID, &tg.Text{Text: "Enter SMS or push code"}, nil)
+					if err != nil {
+						return "", err
+					}
+
+					return strings.Trim(message.Text, " \n"), nil
+				},
+			},
+			new(tinkoff.Mixin[C]),
+		)
+	}
+
+	if config := app.Config().HassGPX; config.Enabled {
+		app.Uses(ctx, new(hassgpx.Mixin[C]))
+	}
 
 	telegram.Run(ctx)
 }

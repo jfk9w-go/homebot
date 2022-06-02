@@ -23,10 +23,6 @@ func (s Storage[C]) String() string {
 
 func (s *Storage[C]) Include(ctx context.Context, app apfel.MixinApp[C]) error {
 	config := app.Config().HassGPXConfig()
-	if !config.Enabled {
-		return apfel.ErrDisabled
-	}
-
 	gorm := &apfel.GormDB[C]{Config: config.DB}
 	if err := app.Use(ctx, gorm, false); err != nil {
 		return err
