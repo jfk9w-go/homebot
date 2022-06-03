@@ -262,7 +262,7 @@ func (c *client) commonMu(operation string) syncf.Locker {
 
 func (c *client) Do(req *http.Request) (*http.Response, error) {
 	resp, err := c.client.Do(req)
-	logf.Get(c).Resultf(req.Context(), logf.Trace, logf.Warn, "%s => %v", &httpf.RequestBuilder{Request: req}, err)
+	logf.Get(c).Resultf(req.Context(), logf.Debug, logf.Warn, "%s => %v", &httpf.RequestBuilder{Request: req}, err)
 	return resp, err
 }
 
@@ -405,9 +405,8 @@ func (c *client) ping() {
 				return
 			case <-ticker.C:
 				pong, err := executeCommonExchange[pong](ctx, c, ping{})
-				logf.Get(c).Resultf(ctx, logf.Trace, logf.Warn, "ping => [%+v] (%v)", pong, err)
+				logf.Get(c).Resultf(ctx, logf.Debug, logf.Warn, "ping => %+v (%v)", pong, err)
 				if err != nil || pong.Payload.AccessLevel != "CLIENT" {
-					logf.Get(c).Warnf(ctx, "received access level [%s], expected [CLIENT]: %v", pong.Payload.AccessLevel, err)
 					_ = c.resetSessionID(ctx)
 					return
 				}

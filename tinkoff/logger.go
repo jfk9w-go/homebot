@@ -117,6 +117,6 @@ func (l *telegramLogger) flush() {
 	}
 
 	if len(l.chapters) == 0 {
-		l.html.Text("")
+		l.html.Text("✔️")
 	}
 }
