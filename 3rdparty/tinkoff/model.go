@@ -198,7 +198,7 @@ type Account struct {
 	ID       string `json:"id" gorm:"primaryKey"`
 	Name     string `json:"name" gorm:"not null"`
 	Type     string `json:"accountType" gorm:"not null"`
-	Username string `json:"-" gorm:"not null"`
+	Username string `json:"-" gorm:"not null;index"`
 	Archived bool   `json:"-" gorm:"not null;default:false"`
 }
 

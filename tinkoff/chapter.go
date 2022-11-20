@@ -40,7 +40,7 @@ func (accountsChapter) sync(ctx context.Context, cvs *canvas) ([]chapter, error)
 		return nil, errors.Wrap(err, "retrieve")
 	}
 
-	if err := cvs.RefreshAccounts(ctx, accounts); err != nil {
+	if err := cvs.RefreshAccounts(ctx, cvs.username, accounts); err != nil {
 		cvs.warnf(ctx, "refresh %d accounts in db: %v", len(accounts), err)
 	} else if len(accounts) == 0 {
 		return nil, nil

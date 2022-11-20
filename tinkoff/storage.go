@@ -72,7 +72,7 @@ func (m *Storage[C]) Include(ctx context.Context, app apfel.MixinApp[C]) error {
 	return nil
 }
 
-func (m *Storage[C]) RefreshAccounts(ctx context.Context, accounts []tinkoff.Account) error {
+func (m *Storage[C]) RefreshAccounts(ctx context.Context, username string, accounts []tinkoff.Account) error {
 	var model tinkoff.Account
 	accountIDs := make([]string, len(accounts))
 	for i, account := range accounts {
@@ -90,7 +90,7 @@ func (m *Storage[C]) RefreshAccounts(ctx context.Context, accounts []tinkoff.Acc
 
 		if err := tx.
 			Model(&model).
-			Where("id not in ?", accountIDs).
+			Where("username = ? and id not in ?", username, accountIDs).
 			Update("archived", true).
 			Error; err != nil {
 			return errors.Wrap(err, "archive old accounts")

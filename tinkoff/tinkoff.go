@@ -31,7 +31,7 @@ type TradingPosition struct {
 }
 
 type StorageInterface interface {
-	RefreshAccounts(ctx context.Context, accounts []tinkoff.Account) error
+	RefreshAccounts(ctx context.Context, username string, accounts []tinkoff.Account) error
 	GetOperationRefreshIntervalStart(ctx context.Context, accountID string) (time.Time, error)
 	RefreshOperations(ctx context.Context, accountID string, since time.Time, operations []tinkoff.Operation) error
 	GetPendingShoppingReceiptOperationIDs(ctx context.Context, accountID string) ([]uint64, error)
