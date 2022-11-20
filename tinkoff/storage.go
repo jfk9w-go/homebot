@@ -74,8 +74,30 @@ func (m *Storage[C]) Include(ctx context.Context, app apfel.MixinApp[C]) error {
 
 func (m *Storage[C]) RefreshAccounts(ctx context.Context, accounts []tinkoff.Account) error {
 	var model tinkoff.Account
-	onConflict := gormf.OnConflictClause(&model, "primaryKey", true, nil)
-	return m.db.WithContext(ctx).Clauses(onConflict).CreateInBatches(accounts, 1000).Error
+	accountIDs := make([]string, len(accounts))
+	for i, account := range accounts {
+		accountIDs[i] = account.ID
+	}
+
+	return m.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		onConflict := gormf.OnConflictClause(&model, "primaryKey", true, nil)
+		if err := tx.
+			Clauses(onConflict).
+			CreateInBatches(accounts, 1000).
+			Error; err != nil {
+			return errors.Wrap(err, "create in batches")
+		}
+
+		if err := tx.
+			Model(&model).
+			Where("id not in ?", accountIDs).
+			Update("archived", true).
+			Error; err != nil {
+			return errors.Wrap(err, "archive old accounts")
+		}
+
+		return nil
+	})
 }
 
 func (m *Storage[C]) GetOperationRefreshIntervalStart(ctx context.Context, accountID string) (time.Time, error) {

@@ -199,6 +199,7 @@ type Account struct {
 	Name     string `json:"name" gorm:"not null"`
 	Type     string `json:"accountType" gorm:"not null"`
 	Username string `json:"-" gorm:"not null"`
+	Archived bool   `json:"-" gorm:"not null;default:false"`
 }
 
 func (a Account) String() string {
